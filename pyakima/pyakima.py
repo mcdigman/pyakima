@@ -33,95 +33,6 @@ Named Tuple Object for storing the coefficients to represent a cubic spline
 """
 
 
-class AkimaSpline:
-    """Python class to manage akima splines"""
-
-    def __init__(
-        self,
-        x,
-        y,
-        ext=3,
-        corner_model=0,
-        denom_small_cut=np.nan,
-        linear_vector_calls=False
-    ):
-        """Create an akima spline object
-        inputs:
-            x:
-                array of monotonically increasing spline control points (must be at least 5)
-            y:
-                array of values at spline control points (size must match x)
-            ext:
-                integer flag for extrapolation method
-            corner_model:
-                flag for corner handling method. Current options are:
-                    0 or 'non-rounded': non-rounded corner handling method of Wodicka, as used in GSL
-                    1 or 'akima': corner handling descrbed by Akima, as used in scipy method='akima'
-                    2 or 'makima': modified corner handling with less overshoot, as in scipy method='makima'
-            denom_small_cut:
-                cutoff in denominator of spline slopes, below which spline has a corner. GSL uses 0, scipy uses 1.e-9
-            linear_vector_calls:
-                affects only speed of __call__, should not change results at all
-                if True, linearly search through spline control points when evaluating splines at xint
-                If False, try a search assuming xint may be partly sorted (either forward or reverse)
-        """
-
-        # record the inputs
-
-        self.ext = ext
-        self.denom_small_cut = denom_small_cut
-        self.linear_vector_calls = linear_vector_calls
-
-        # parse the input corner model
-        if corner_model in ('non-rounded', 0):
-            self.corner_model = 0
-        elif corner_model in ('akima', 1):
-            self.corner_model = 1
-        elif corner_model in ('makima', 2):
-            self.corner_model = 2
-        else:
-            raise ValueError('Unrecognized option for corner model')
-
-        # default values for the denominator cutoff depend on the method
-        if np.isnan(self.denom_small_cut):
-            if corner_model == 0:
-                # match gsl
-                self.denom_small_cut = 0.
-            elif self.corner_model == 2:
-                # cut is superfluous by design in the modified akima case
-                # because the slope is engineered to be zero when the denominator is zero
-                self.denom_small_cut = 0.
-            else:
-                # match scipy with cut
-                self.denom_small_cut = 1.e-9
-
-        # get the spline object
-        self.spline = akima_create_helper(
-                x.copy(),
-                y.copy(),
-                corner_model=self.corner_model,
-                denom_small_cut=self.denom_small_cut
-        )
-
-    def __call__(self, xint):
-        """
-        call the akima spline object
-        inputs:
-                xint:
-                    either a scalar or array of points at which to evaluate the spline
-        outputs:
-                res:
-                    scalar or array of same size as xint containing the spline evaluated at requested points
-        """
-        if isinstance(xint, np.ndarray):
-            if self.linear_vector_calls:
-                return cubic_call_vector_linear(xint, self.spline, self.ext)
-            else:
-                return cubic_call_vector(xint, self.spline, self.ext)
-        else:
-            return cubic_call_scalar(xint, self.spline, self.ext)
-
-
 @njit()
 def akima_create_helper(x, y, corner_model=0, denom_small_cut=0.):
     """
@@ -498,3 +409,92 @@ def cubic_call_vector(xint, spline, ext):
         res[j] = spline_single_knot_eval(xint[j], spline, i)
 
     return res
+
+
+class AkimaSpline:
+    """Python class to manage akima splines"""
+
+    def __init__(
+        self,
+        x,
+        y,
+        ext=3,
+        corner_model=0,
+        denom_small_cut=np.nan,
+        linear_vector_calls=False
+    ):
+        """Create an akima spline object
+        inputs:
+            x:
+                array of monotonically increasing spline control points (must be at least 5)
+            y:
+                array of values at spline control points (size must match x)
+            ext:
+                integer flag for extrapolation method
+            corner_model:
+                flag for corner handling method. Current options are:
+                    0 or 'non-rounded': non-rounded corner handling method of Wodicka, as used in GSL
+                    1 or 'akima': corner handling descrbed by Akima, as used in scipy method='akima'
+                    2 or 'makima': modified corner handling with less overshoot, as in scipy method='makima'
+            denom_small_cut:
+                cutoff in denominator of spline slopes, below which spline has a corner. GSL uses 0, scipy uses 1.e-9
+            linear_vector_calls:
+                affects only speed of __call__, should not change results at all
+                if True, linearly search through spline control points when evaluating splines at xint
+                If False, try a search assuming xint may be partly sorted (either forward or reverse)
+        """
+
+        # record the inputs
+
+        self.ext = ext
+        self.denom_small_cut = denom_small_cut
+        self.linear_vector_calls = linear_vector_calls
+
+        # parse the input corner model
+        if corner_model in ('non-rounded', 0):
+            self.corner_model = 0
+        elif corner_model in ('akima', 1):
+            self.corner_model = 1
+        elif corner_model in ('makima', 2):
+            self.corner_model = 2
+        else:
+            raise ValueError('Unrecognized option for corner model')
+
+        # default values for the denominator cutoff depend on the method
+        if np.isnan(self.denom_small_cut):
+            if corner_model == 0:
+                # match gsl
+                self.denom_small_cut = 0.
+            elif self.corner_model == 2:
+                # cut is superfluous by design in the modified akima case
+                # because the slope is engineered to be zero when the denominator is zero
+                self.denom_small_cut = 0.
+            else:
+                # match scipy with cut
+                self.denom_small_cut = 1.e-9
+
+        # get the spline object
+        self.spline = akima_create_helper(
+                x.copy(),
+                y.copy(),
+                corner_model=self.corner_model,
+                denom_small_cut=self.denom_small_cut
+        )
+
+    def __call__(self, xint):
+        """
+        call the akima spline object
+        inputs:
+                xint:
+                    either a scalar or array of points at which to evaluate the spline
+        outputs:
+                res:
+                    scalar or array of same size as xint containing the spline evaluated at requested points
+        """
+        if isinstance(xint, np.ndarray):
+            if self.linear_vector_calls:
+                return cubic_call_vector_linear(xint, self.spline, self.ext)
+            else:
+                return cubic_call_vector(xint, self.spline, self.ext)
+        else:
+            return cubic_call_scalar(xint, self.spline, self.ext)
