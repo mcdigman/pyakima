@@ -4,14 +4,11 @@ demo to demonstrate calling python akima method
 
 """
 
+import matplotlib.pyplot as plt
 import numpy as np
-
 from scipy.interpolate import Akima1DInterpolator
 
-import matplotlib.pyplot as plt
-
 from pyakima import AkimaSpline
-
 
 if __name__=='__main__':
 

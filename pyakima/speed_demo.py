@@ -1,16 +1,12 @@
 """demonstrate speed of pyakima vs scipy and pygsl"""
 from time import perf_counter
 
+import matplotlib.pyplot as plt
 import numpy as np
-
+import pygsl_lite.spline
 from scipy.interpolate import Akima1DInterpolator
 
-import pygsl_lite.spline
-
-import matplotlib.pyplot as plt
-
 from pyakima import AkimaSpline
-
 
 if __name__ == '__main__':
 
