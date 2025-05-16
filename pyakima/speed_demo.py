@@ -35,14 +35,14 @@ if __name__ == '__main__':
     n_run = 10000
 
     t1 = perf_counter()
-    for itrm in range(n_run):
+    for _itrm in range(n_run):
         Akima1DInterpolator(x, y, extrapolate=True)
     t2 = perf_counter()
 
     print('scipy init time    corner 0 %.3e' % ((t2-t1)/n_run))
 
     t1 = perf_counter()
-    for itrm in range(n_run):
+    for _itrm in range(n_run):
         akima_gsl_loc = pygsl_lite.spline.akima(x.size)
         akima_gsl_loc.init(x, y)
     t2 = perf_counter()
@@ -50,28 +50,28 @@ if __name__ == '__main__':
     print('gsl   init time    corner 0 %.3e' % ((t2-t1)/n_run))
 
     t1 = perf_counter()
-    for itrm in range(n_run):
+    for _itrm in range(n_run):
         AkimaSpline(x, y, corner_model=corner_model)
     t2 = perf_counter()
 
     print('my    init time    corner 0 %.3e' % ((t2-t1)/n_run))
 
     t1 = perf_counter()
-    for itrm in range(n_run):
+    for _itrm in range(n_run):
         akima_scipy(xs)
     t2 = perf_counter()
 
     print('scipy eval time    corner 0 %.3e' % ((t2-t1)/n_run))
 
     t1 = perf_counter()
-    for itrm in range(n_run):
+    for _itrm in range(n_run):
         akima_gsl.eval_vector(xs)
     t2 = perf_counter()
 
     print('gsl   eval time    corner 0 %.3e' % ((t2-t1)/n_run))
 
     t1 = perf_counter()
-    for itrm in range(n_run):
+    for _itrm in range(n_run):
         akima_my(xs)
     t2 = perf_counter()
 

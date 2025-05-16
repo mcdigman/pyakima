@@ -36,7 +36,7 @@ Named Tuple Object for storing the coefficients to represent a cubic spline
 @njit()
 def akima_create_helper(x, y, corner_model=0, denom_small_cut=0.):
     """
-    method to precompute the coefficients necessary to handle akima splines.
+    Method to precompute the coefficients necessary to handle akima splines.
 
     inputs:
         x:
@@ -114,7 +114,8 @@ def akima_create_helper(x, y, corner_model=0, denom_small_cut=0.):
         sharp_corners = False
         # denom_small_cut should be zero to match makima
     else:
-        raise ValueError('Unrecognized option for corner model')
+        msg = 'Unrecognized option for corner model'
+        raise ValueError(msg)
 
     # the numerically computed local slopes
     m = np.zeros(N + 3)
@@ -213,7 +214,7 @@ def akima_create_helper(x, y, corner_model=0, denom_small_cut=0.):
 @njit()
 def spline_single_knot_eval(xint, spline, i):
     """
-    evaluate the spline from the values at the knot point with index i
+    Evaluate the spline from the values at the knot point with index i
     without checking whether xint is in the x range covered by the specified knot
 
     inputs:
@@ -227,7 +228,6 @@ def spline_single_knot_eval(xint, spline, i):
         res:
             array or scalar of evaluated points of the same shape as xint
     """
-
     return (
         spline.a[i]
         + spline.b[i] * (xint - spline.x[i])
@@ -239,7 +239,7 @@ def spline_single_knot_eval(xint, spline, i):
 @njit()
 def cubic_call_scalar(xint, spline, ext):
     """
-    helper for scalar cubic spline evaluation
+    Helper for scalar cubic spline evaluation
     linearly searches through control points; more intelligent searches are possible, see e.g. cubic_call_vector
 
     inputs:
@@ -253,7 +253,6 @@ def cubic_call_scalar(xint, spline, ext):
         res:
             scalar float, interpolated y value
     """
-
     N = spline.N
 
     # handle out of bounds
@@ -267,7 +266,8 @@ def cubic_call_scalar(xint, spline, ext):
         y_bound_low = np.nan
         y_bound_high = np.nan
     else:
-        raise ValueError('Unrecognized option for extrapolation')
+        msg = 'Unrecognized option for extrapolation'
+        raise ValueError(msg)
 
     # for constant boundary value handling
     if xint < spline.x[0]:
@@ -287,7 +287,7 @@ def cubic_call_scalar(xint, spline, ext):
 @njit()
 def cubic_call_vector_linear(xint, spline, ext):
     """
-    helper similar to cubic_call_vector (see more discussion there), but make loop iterations uncorrelated.
+    Helper similar to cubic_call_vector (see more discussion there), but make loop iterations uncorrelated.
     This method may be faster if xint not at least partially sorted
     or on some compute architectures (this method is more readily parallelizable)
 
@@ -313,7 +313,7 @@ def cubic_call_vector_linear(xint, spline, ext):
 @njit()
 def cubic_call_vector(xint, spline, ext):
     """
-    helper vector call method for evaluating the akima splines.
+    Helper vector call method for evaluating the akima splines.
     Note that there are several possible implementations of this method
     that could be best in various circumstances.
     The current implementation can take advantage of
@@ -340,7 +340,6 @@ def cubic_call_vector(xint, spline, ext):
         res:
             array of same size as xint containing interpolated y values
     """
-
     N = spline.N
 
     # boundary value handling
@@ -354,7 +353,8 @@ def cubic_call_vector(xint, spline, ext):
         y_bound_low = np.nan
         y_bound_high = np.nan
     else:
-        raise ValueError('Unrecognized option for extrapolation')
+        msg = 'Unrecognized option for extrapolation'
+        raise ValueError(msg)
 
     res = np.zeros(xint.size)
 
@@ -443,7 +443,6 @@ class AkimaSpline:
                 if True, linearly search through spline control points when evaluating splines at xint
                 If False, try a search assuming xint may be partly sorted (either forward or reverse)
         """
-
         # record the inputs
 
         self.ext = ext
@@ -458,7 +457,8 @@ class AkimaSpline:
         elif corner_model in ('makima', 2):
             self.corner_model = 2
         else:
-            raise ValueError('Unrecognized option for corner model')
+            msg = 'Unrecognized option for corner model'
+            raise ValueError(msg)
 
         # default values for the denominator cutoff depend on the method
         if np.isnan(self.denom_small_cut):
@@ -483,7 +483,7 @@ class AkimaSpline:
 
     def __call__(self, xint):
         """
-        call the akima spline object
+        Call the akima spline object
         inputs:
                 xint:
                     either a scalar or array of points at which to evaluate the spline
