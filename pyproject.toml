@@ -1,0 +1,18 @@
+[project]
+name = "pyakima"
+version = "0.0.1"
+description = "Tool for getting numba compilable akima spline interpolation"
+readme = "README.md"
+authors = [
+  { name="Matthew C. Digman", email="matthew.digman@vanderbilt.edu" }
+]
+license = { file = "LICENSE" }
+dependencies = [
+    "numpy",
+    "numba",
+]
+requires-python = ">=3.7"
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
