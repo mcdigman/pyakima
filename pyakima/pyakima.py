@@ -24,20 +24,20 @@ class SplineCoeffs(NamedTuple):
 
     Parameters
     ----------
-        n_control:
-            scalar integer, number of x coordinates
-        x:
-            array of n_control x coordinates of spline control points
-        y:
-            array of n_control y coordinates of spline control points
-        a:
-            array of n_control-1 first terms in cubic spline expansion at control points
-        b:
-            array of n_control-1 second terms in cubic spline expansion at control points
-        c:
-            array of n_control-1 third terms in cubic spline expansion at control points
-        d:
-            array of n_control-1 fourth terms in cubic spline expansion at control points
+    n_control: int
+        number of x coordinates
+    x: NDArray[np.floating]
+        array of n_control x coordinates of spline control points
+    y: NDArray[np.floating]
+        array of n_control y coordinates of spline control points
+    a: NDArray[np.floating]
+        array of n_control-1 first terms in cubic spline expansion at control points
+    b: NDArray[np.floating]
+        array of n_control-1 second terms in cubic spline expansion at control points
+    c: NDArray[np.floating]
+        array of n_control-1 third terms in cubic spline expansion at control points
+    d: NDArray[np.floating]
+        array of n_control-1 fourth terms in cubic spline expansion at control points
     """
 
     x: NDArray[np.floating]
@@ -54,46 +54,53 @@ def akima_create_helper(x: NDArray[np.floating], y: NDArray[np.floating], *, cor
     """
     Precompute the coefficients necessary to handle akima splines.
 
-    inputs:
-        x:
-            monotonically increasing x coordinates of the spline control points (must be at least 5)
+    Parameters
+    ----------
+    x: NDArray[np.floating]
+        monotonically increasing x coordinates of the spline control points (must be at least 5)
+    y: NDArray[np.floating]
+        the y coordinates of the spline control points (must match size of x)
+        Note that this method handles non-finite y the way gsl does,
+        which is to use them in computations just like finite values
+        This typically produces nans when the spline is evaluated near the non-finite y.
+        The gSL handling allows the spline to be computed ~sensibly for data stretches
+        that are mostly finite but have a few non-finite values.
+        scipy instead detects any non-finite values and throws an error
+    denom_small_cut: float
+        threshold below which the denominator in the slope
+        is assumed to be zero and therefore needs different handling.
+        Should usually be preferable to keep it zero.
+    corner_model: int
+        integer selection for how to handle corners.
+        corner_model == 0:
+            The Wodicka non-rounded corner method,
+            which reduces spline misbehavior at sharp corners but makes the spline not differentiable there,
+            also creating slight qualitative discontinutity when the denominator of the slope becomes exactly 0.
+            If corner_model == 0 and denom_small_cut == 0., this implementation should near-exactly match gsl's
+            Further description below.
+        corner_model == 1:
+            default akima implementation can behave badly at corners,
+            and also has a qualitative discontinuity in the splines when the denominator crosses denom_small_cut
+            Close match to scipy method='akima'
+        corner_model == 2:
+            modified akima implementation
+            (see https://blogs.mathworks.com/cleve/2019/04/29/makima-piecewise-cubic-interpolation/ and scipy)
+            with weights that act as numerical stabilizers, removing qualitative discontinuities such that
+            no additional special handling is needed for corners.
+            close match to scipy method='makima'
 
-        y:
-            the y coordinates of the spline control points (must match size of x)
-            Note that this method handles non-finite y the way gsl does,
-            which is to use them in computations just like finite values
-            This typically produces nans when the spline is evaluated near the non-finite y.
-            The gSL handling allows the spline to be computed ~sensibly for data stretches
-            that are mostly finite but have a few non-finite values.
-            scipy instead detects any non-finite values and throws an error
+    Returns
+    -------
+    SplineCoeffs:
+        Object representing the computed spline
 
-        denom_small_cut:
-            threshold below which the denominator in the slope
-            is assumed to be zero and therefore needs different handling.
-            Should usually be preferable to keep it zero.
+    Raises
+    ------
+    ValueError
+        if model is unrecognized
 
-        corner_model:
-            integer selection for how to handle corners.
-            corner_model == 0:
-                The Wodicka non-rounded corner method,
-                which reduces spline misbehavior at sharp corners but makes the spline not differentiable there,
-                also creating slight qualitative discontinutity when the denominator of the slope becomes exactly 0.
-                If corner_model == 0 and denom_small_cut == 0., this implementation should near-exactly match gsl's
-                Further description below.
-            corner_model == 1:
-                default akima implementation can behave badly at corners,
-                and also has a qualitative discontinuity in the splines when the denominator crosses denom_small_cut
-                Close match to scipy method='akima'
-            corner_model == 2:
-                modified akima implementation
-                (see https://blogs.mathworks.com/cleve/2019/04/29/makima-piecewise-cubic-interpolation/ and scipy)
-                with weights that act as numerical stabilizers, removing qualitative discontinuities such that
-                no additional special handling is needed for corners.
-                close match to scipy method='makima'
-    outputs:
-        spline:
-            a SplineCoeffs object representing the computed spline
-
+    Notes
+    -----
     Notes on non-rounded corner akima spline implementation:
     (up to floating point differences from different factoring and compilation);
     it is described in algorithm 13.1 in "Akima and Renner Subsplines" from "Numerical Algorithms with C"
@@ -238,17 +245,17 @@ def spline_single_knot_eval(xint: float | NDArray[np.floating], spline: SplineCo
 
     Parameters
     ----------
-        xint:
-            array or scalar of x values to evaluate the spline at
-        spline:
-            a SplineCoeffs object representing the spline with points to evaluate
-        i:
-            scalar integer index of the spline knot to evaluate the spline at
+    xint: float | NDArray[np.floating]
+        array or scalar of x values to evaluate the spline at
+    spline: SplineCoeffs
+        a SplineCoeffs object representing the spline with points to evaluate
+    i: int
+        index of the spline knot to evaluate the spline at
 
     Returns
     -------
-        res:
-            array or scalar of evaluated points of the same shape as xint
+    float | NDArray[np.floating]
+        array or scalar of evaluated points of the same shape as xint
     """
     return (
         spline.a[i]
@@ -265,16 +272,24 @@ def cubic_call_scalar(xint: float, spline: SplineCoeffs, ext: int) -> float:
 
     Linearly searches through control points; more intelligent searches are possible, see e.g. cubic_call_vector
 
-    inputs:
-        xint:
-            scalar float point at which to evaluate the spline
-        spline:
-            a SplineCoeffs object representing the spline with points to evaluate
-        ext:
-            integer flag to select method of bounds handling
-    outputs:
-        res:
-            scalar float, interpolated y value
+    Parameters
+    ----------
+    xint: float
+        scalar float point at which to evaluate the spline
+    spline: SplineCoeffs
+        a SplineCoeffs object representing the spline with points to evaluate
+    ext: int
+        flag to select method of bounds handling
+
+    Returns
+    -------
+    float:
+        interpolated y value
+
+    Raises
+    ------
+    ValueError
+        if the extrapolation option is unrecognized
     """
     n_control = spline.n_control
 
@@ -315,16 +330,19 @@ def cubic_call_vector_linear(xint: NDArray[np.floating], spline: SplineCoeffs, e
     This method may be faster if xint not at least partially sorted
     or on some compute architectures (this method is more readily parallelizable)
 
-    inputs:
-        xint:
-            array of points at which to evaluate the spline
-        spline:
-            a SplineCoeffs object representing the spline with points to evaluate
-        ext:
-            integer flag to select method of bounds handling
-    outputs:
-        res:
-            array of same size as xint containing interpolated y values
+    Parameters
+    ----------
+    xint: NDArray[np.floating]
+        array of points at which to evaluate the spline
+    spline: SplineCoeffs
+        a SplineCoeffs object representing the spline with points to evaluate
+    ext: int
+        integer flag to select method of bounds handling
+
+    Returns
+    -------
+    NDArray[np.floating]
+        array of same size as xint containing interpolated y values
     """
     res = np.zeros(xint.size)
     # iterate over every input point
@@ -354,16 +372,24 @@ def cubic_call_vector(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int
     Depending on the application, lazy evaluation of spline coefficients
     could be more efficient, but is not implemented here yet.
 
-    inputs:
-        xint:
-            array of points at which to evaluate the spline
-        spline:
-            a SplineCoeffs object representing the spline with points to evaluate
-        ext:
-            integer flag to select method of bounds handling
-    outputs:
-        res:
-            array of same size as xint containing interpolated y values
+    Parameters
+    ----------
+    xint: NDArray[np.floating]
+        array of points at which to evaluate the spline
+    spline: SplineCoeffs
+        a SplineCoeffs object representing the spline with points to evaluate
+    ext: int
+        integer flag to select method of bounds handling
+
+    Returns
+    -------
+    NDArray[np.floating]
+        array of same size as xint containing interpolated y values
+
+    Raises
+    ------
+    ValueError
+        if the extrapolation method is unrecognized
     """
     n_control = spline.n_control
 
@@ -447,23 +473,29 @@ class AkimaSpline:
 
         Parameters
         ----------
-            x:
-                array of monotonically increasing spline control points (must be at least 5)
-            y:
-                array of values at spline control points (size must match x)
-            ext:
-                integer flag for extrapolation method
-            corner_model:
-                flag for corner handling method. Current options are:
-                    0 or 'non-rounded': non-rounded corner handling method of Wodicka
-                    1 or 'akima': corner handling descrbed by Akima, as used in scipy method='akima'
-                    2 or 'makima': modified corner handling with less overshoot, as in scipy method='makima'
-            denom_small_cut:
-                cutoff in denominator of spline slopes, below which spline has a corner.
-            linear_vector_calls:
-                affects only speed of __call__, should not change results at all
-                if 1, linearly search through spline control points when evaluating splines at xint
-                If 0, try a search assuming xint may be partly sorted (either forward or reverse)
+        x: NDArray[np.floating]
+            array of monotonically increasing spline control points (must be at least 5)
+        y: NDArray[np.floating]
+            array of values at spline control points (size must match x)
+        ext: int
+            integer flag for extrapolation method
+        corner_model: int
+            flag for corner handling method. Current options are:
+                0 or 'non-rounded': non-rounded corner handling method of Wodicka
+                1 or 'akima': corner handling descrbed by Akima, as used in scipy method='akima'
+                2 or 'makima': modified corner handling with less overshoot, as in scipy method='makima'
+        denom_small_cut: float
+            cutoff in denominator of spline slopes, below which spline has a corner.
+        linear_vector_calls: int
+            affects only speed of __call__, should not change results at all
+            if 1, linearly search through spline control points when evaluating splines at xint
+            If 0, try a search assuming xint may be partly sorted (either forward or reverse)
+
+
+        Raises
+        ------
+        ValueError
+            if the specified model parameters are unrecognized
         """
         # record the inputs
         assert linear_vector_calls in (0, 1)
@@ -514,12 +546,12 @@ class AkimaSpline:
 
         Parameters
         ----------
-        xint NDArray[np.floating] | float:
+        xint: NDArray[np.floating] | float
             either a scalar or array of points at which to evaluate the spline
 
         Returns
         -------
-        res NDArray[np.floating] | float:
+        res: NDArray[np.floating] | float
             scalar or array of same size as xint containing the spline evaluated at requested points
         """
         if isinstance(xint, np.ndarray):
