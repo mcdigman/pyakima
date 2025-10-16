@@ -1,4 +1,5 @@
-"""Python Akima Spline Implementation
+"""Python Akima Spline Implementation.
+
 C Matthew Digman 2025
 
 objects defined:
@@ -19,26 +20,29 @@ if TYPE_CHECKING:
 
 
 class SplineCoeffs(NamedTuple):
-    """
-    Named Tuple Object for storing the coefficients to represent a cubic spline
-        N:
+    """Named Tuple Object for storing the coefficients to represent a cubic spline.
+
+    Parameters
+    ----------
+        n_control:
             scalar integer, number of x coordinates
         x:
-            array of N x coordinates of spline control points
+            array of n_control x coordinates of spline control points
         y:
-            array of N y coordinates of spline control points
+            array of n_control y coordinates of spline control points
         a:
-            array of N-1 first terms in cubic spline expansion at control points
+            array of n_control-1 first terms in cubic spline expansion at control points
         b:
-            array of N-1 second terms in cubic spline expansion at control points
+            array of n_control-1 second terms in cubic spline expansion at control points
         c:
-            array of N-1 third terms in cubic spline expansion at control points
+            array of n_control-1 third terms in cubic spline expansion at control points
         d:
-            array of N-1 fourth terms in cubic spline expansion at control points
+            array of n_control-1 fourth terms in cubic spline expansion at control points
     """
+
     x: NDArray[np.floating]
     y: NDArray[np.floating]
-    N: NDArray[np.floating]
+    n_control: int
     a: NDArray[np.floating]
     b: NDArray[np.floating]
     c: NDArray[np.floating]
@@ -48,7 +52,7 @@ class SplineCoeffs(NamedTuple):
 @njit()
 def akima_create_helper(x: NDArray[np.floating], y: NDArray[np.floating], *, corner_model: int = 0, denom_small_cut: float = 0.) -> SplineCoeffs:
     """
-    Method to precompute the coefficients necessary to handle akima splines.
+    Precompute the coefficients necessary to handle akima splines.
 
     inputs:
         x:
@@ -100,19 +104,19 @@ def akima_create_helper(x: NDArray[np.floating], y: NDArray[np.floating], *, cor
 
     """
     # enforce required conditions
-    N = x.size
-    assert N > 4
+    n_control: int = x.size
+    assert n_control > 4
     assert y.size == x.size
 
     # calculate the difference
-    xdiffs = np.diff(x)
+    xdiffs: NDArray[np.floating] = np.diff(x)
     assert np.all(xdiffs > 0.)
 
     # set boolean variables to control the loop behavior in each corner model case
     if corner_model == 0:
         # gsl-like non-rounded corner handling
-        modified = False
-        sharp_corners = True
+        modified: bool = False
+        sharp_corners: bool = True
         # denom_small_cut should be zero to match gsl
     elif corner_model == 1:
         # scipy method='akima'-like corner handling
@@ -129,35 +133,35 @@ def akima_create_helper(x: NDArray[np.floating], y: NDArray[np.floating], *, cor
         raise ValueError(msg)
 
     # the numerically computed local slopes
-    m = np.zeros(N + 3)
+    m = np.zeros(n_control + 3)
 
-    m[2:N + 1] = np.diff(y) / xdiffs  # local slopes
+    m[2:n_control + 1] = np.diff(y) / xdiffs  # local slopes
 
     # natural boundary conditions
     m[0] = 3 * m[2] - 2 * m[3]
     m[1] = 2 * m[2] - m[3]
-    m[N + 1] = 2 * m[N] - m[N - 1]
-    m[N + 2] = 3 * m[N] - 2 * m[N - 1]
+    m[n_control + 1] = 2 * m[n_control] - m[n_control - 1]
+    m[n_control + 2] = 3 * m[n_control] - 2 * m[n_control - 1]
 
-    t_left = np.zeros(N)   # left sided slopes
-    t_right = np.zeros(N)  # right side slopes (differ from t_left only for non-rounded corner handling)
+    t_left = np.zeros(n_control)   # left sided slopes
+    t_right = np.zeros(n_control)  # right side slopes (differ from t_left only for non-rounded corner handling)
 
     # loop through the control points
-    for i in range(N):
+    for i in range(n_control):
         # w1 and w2 are weights
         if modified:
             # modified akima weights
-            w1 = np.abs(m[i + 3] - m[i + 2]) + np.abs(m[i + 3] + m[i + 2]) / 2.
-            w2 = np.abs(m[i + 1] - m[i]) + np.abs(m[i + 1] + m[i]) / 2.
+            w1: float = np.abs(m[i + 3] - m[i + 2]) + np.abs(m[i + 3] + m[i + 2]) / 2.
+            w2: float = np.abs(m[i + 1] - m[i]) + np.abs(m[i + 1] + m[i]) / 2.
         else:
             # basic akima weights
             w1 = np.abs(m[i + 3] - m[i + 2])
             w2 = np.abs(m[i + 1] - m[i])
 
         # the denominator of the slope; if denom is zero and m[i+2]!=m[i+1], we have a corner
-        denom = w1 + w2
+        denom: float = w1 + w2
 
-        dm2 = np.abs(m[i + 2] - m[i + 1])  # if denom is zero and m[i+2] == m[i+1], the spline is just flat
+        dm2: float = np.abs(m[i + 2] - m[i + 1])  # if denom is zero and m[i+2] == m[i+1], the spline is just flat
 
         if np.isnan(denom) or ~np.isfinite(dm2):
             # handling for nans
@@ -173,7 +177,7 @@ def akima_create_helper(x: NDArray[np.floating], y: NDArray[np.floating], *, cor
 
         # calculate the denominator cutoff we need with appropriate dimension scaling
         if denom_small_cut == 0.:
-            denom_cut_loc = 0.
+            denom_cut_loc: float = 0.
         else:
             denom_cut_loc = denom_small_cut * dm2
 
@@ -192,7 +196,7 @@ def akima_create_helper(x: NDArray[np.floating], y: NDArray[np.floating], *, cor
         # zero denominator should be trapped by previous checks,
         # but handle anyway in case an edge case slips by to prevent zero division errors
         if w2 == 0. or denom == 0.:
-            alpha = 0.
+            alpha: float = 0.
         else:
             # derivative of slope with respect to m, used to interpolate the slope
             alpha = w2 / denom
@@ -202,23 +206,23 @@ def akima_create_helper(x: NDArray[np.floating], y: NDArray[np.floating], *, cor
         t_right[i] = t_left[i]
 
     # create the arrays to store spline coefficients
-    a = np.zeros(N - 1)
-    b = np.zeros(N - 1)
-    c = np.zeros(N - 1)
-    d = np.zeros(N - 1)
+    a = np.zeros(n_control - 1)
+    b = np.zeros(n_control - 1)
+    c = np.zeros(n_control - 1)
+    d = np.zeros(n_control - 1)
 
     # store the spline coefficients
-    for i in range(N - 1):
+    for i in range(n_control - 1):
         a[i] = y[i]
         b[i] = t_right[i]
 
         # as written, h is the same as xdiff, but might not be in some possible modifications
-        h = x[i + 1] - x[i]
+        h: float = x[i + 1] - x[i]
 
         c[i] = (3 * m[i + 2] - 2 * t_right[i] - t_left[i + 1]) / h
         d[i] = (t_right[i] + t_left[i + 1] - 2 * m[i + 2]) / h**2
 
-    return SplineCoeffs(x, y, N, a, b, c, d)
+    return SplineCoeffs(x, y, n_control, a, b, c, d)
 
 
 @overload
@@ -226,19 +230,23 @@ def spline_single_knot_eval(xint: float, spline: SplineCoeffs, i: int) -> float:
 @overload
 def spline_single_knot_eval(xint: NDArray[np.floating], spline: SplineCoeffs, i: int) -> NDArray[np.floating]: ...
 @njit()
-def spline_single_knot_eval(xint, spline: SplineCoeffs, i: int):
+def spline_single_knot_eval(xint: float | NDArray[np.floating], spline: SplineCoeffs, i: int) -> float | NDArray[np.floating]:
     """
-    Evaluate the spline from the values at the knot point with index i
-    without checking whether xint is in the x range covered by the specified knot
+    Evaluate the spline from the values at the knot point with index i.
 
-    inputs:
+    Do not check whether xint is in the x range covered by the specified knot.
+
+    Parameters
+    ----------
         xint:
             array or scalar of x values to evaluate the spline at
         spline:
             a SplineCoeffs object representing the spline with points to evaluate
         i:
             scalar integer index of the spline knot to evaluate the spline at
-    outputs:
+
+    Returns
+    -------
         res:
             array or scalar of evaluated points of the same shape as xint
     """
@@ -253,8 +261,9 @@ def spline_single_knot_eval(xint, spline: SplineCoeffs, i: int):
 @njit()
 def cubic_call_scalar(xint: float, spline: SplineCoeffs, ext: int) -> float:
     """
-    Helper for scalar cubic spline evaluation
-    linearly searches through control points; more intelligent searches are possible, see e.g. cubic_call_vector
+    Call cubic spline with a scalar.
+
+    Linearly searches through control points; more intelligent searches are possible, see e.g. cubic_call_vector
 
     inputs:
         xint:
@@ -267,15 +276,15 @@ def cubic_call_scalar(xint: float, spline: SplineCoeffs, ext: int) -> float:
         res:
             scalar float, interpolated y value
     """
-    N = spline.N
+    n_control = spline.n_control
 
     # handle out of bounds
     if ext == 1:
-        y_bound_low = 0.
-        y_bound_high = 0.
+        y_bound_low: float = 0.
+        y_bound_high: float = 0.
     elif ext == 3:
-        y_bound_low = spline.y[0]
-        y_bound_high = spline.y[-1]
+        y_bound_low = float(spline.y[0])
+        y_bound_high = float(spline.y[-1])
     elif ext == 4:
         y_bound_low = np.nan
         y_bound_high = np.nan
@@ -289,17 +298,19 @@ def cubic_call_scalar(xint: float, spline: SplineCoeffs, ext: int) -> float:
     if xint > spline.x[-1]:
         return y_bound_high
     # find the proper subspline
-    for i in range(N - 2):
+    for i in range(n_control - 2):
         if xint < spline.x[i + 1]:
             return spline_single_knot_eval(xint, spline, i)
 
     # always evaluate using last iteration if we get here
-    return spline_single_knot_eval(xint, spline, N - 2)
+    return spline_single_knot_eval(xint, spline, n_control - 2)
 
 
 @njit()
 def cubic_call_vector_linear(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int) -> NDArray[np.floating]:
     """
+    Evaluate akima splines with a scalar input.
+
     Helper similar to cubic_call_vector (see more discussion there), but make loop iterations uncorrelated.
     This method may be faster if xint not at least partially sorted
     or on some compute architectures (this method is more readily parallelizable)
@@ -326,7 +337,8 @@ def cubic_call_vector_linear(xint: NDArray[np.floating], spline: SplineCoeffs, e
 @njit()
 def cubic_call_vector(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int) -> NDArray[np.floating]:
     """
-    Helper vector call method for evaluating the akima splines.
+    Evaluate akima splines with a vector input.
+
     Note that there are several possible implementations of this method
     that could be best in various circumstances.
     The current implementation can take advantage of
@@ -353,15 +365,15 @@ def cubic_call_vector(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int
         res:
             array of same size as xint containing interpolated y values
     """
-    N = spline.N
+    n_control = spline.n_control
 
     # boundary value handling
     if ext == 1:
-        y_bound_low = 0.
-        y_bound_high = 0.
+        y_bound_low: float = 0.
+        y_bound_high: float = 0.
     elif ext == 3:
-        y_bound_low = spline.y[0]
-        y_bound_high = spline.y[-1]
+        y_bound_low = float(spline.y[0])
+        y_bound_high = float(spline.y[-1])
     elif ext == 4:
         y_bound_low = np.nan
         y_bound_high = np.nan
@@ -372,12 +384,12 @@ def cubic_call_vector(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int
     res = np.zeros(xint.size)
 
     # handle the initial value
-    last_idx = np.searchsorted(spline.x[:N - 1], xint[0], side='right') - 1
-    if last_idx > N - 2:
-        last_idx = N - 2
+    last_idx: int = int(np.searchsorted(spline.x[:n_control - 1], float(xint[0]), side='right') - 1)
+    if last_idx > n_control - 2:
+        last_idx = n_control - 2
     elif last_idx < 0:
         last_idx = 0
-    res[0] = cubic_call_scalar(xint[0], spline, ext)
+    res[0] = cubic_call_scalar(float(xint[0]), spline, ext)
 
     # find the proper subspline for later iterations using previous results as a guess for the location
     for j in range(1, xint.size):
@@ -385,47 +397,42 @@ def cubic_call_vector(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int
         # we can use successive starting guesses to accelerate finding the nearest spline points
         # this speedup will get larger if there is more points; if less it might be better to do a linear search
 
-        # i = np.searchsorted(spline.x[:N-1], xint[j], side='right') - 1
+        x_loc = float(xint[j])
 
-        if xint[j] < spline.x[0]:
+        if x_loc < spline.x[0]:
             res[j] = y_bound_low
             last_idx = 0
             continue
 
-        if xint[j] >= spline.x[N - 2]:
-            if xint[j] <= spline.x[N - 1]:
-                res[j] = spline_single_knot_eval(xint[j], spline, N - 2)
-                last_idx = N - 2
+        if x_loc >= spline.x[n_control - 2]:
+            if x_loc <= spline.x[n_control - 1]:
+                res[j] = spline_single_knot_eval(x_loc, spline, n_control - 2)
+                last_idx = n_control - 2
             else:
                 res[j] = y_bound_high
-                last_idx = N - 2
+                last_idx = n_control - 2
             continue
 
-        if xint[j] > xint[j - 1]:
-            if xint[j] < spline.x[last_idx + 1]:
+        if x_loc > xint[j - 1]:
+            if x_loc < spline.x[last_idx + 1]:
                 i = last_idx
             else:
-                i = (
-                    np.searchsorted(spline.x[last_idx:N - 1], xint[j], side='right')
-                    - 1
-                    + last_idx
-                )
+                i = int(np.searchsorted(spline.x[last_idx:n_control - 1], x_loc, side='right') - 1 + last_idx)
             last_idx = i
+        elif x_loc >= spline.x[last_idx]:
+            i = last_idx
         else:
-            if xint[j] >= spline.x[last_idx]:
-                i = last_idx
-            else:
-                i = np.searchsorted(spline.x[:last_idx], xint[j], side='right') - 1
+            i = int(np.searchsorted(spline.x[:last_idx], x_loc, side='right') - 1)
 
         last_idx = i
 
-        res[j] = spline_single_knot_eval(xint[j], spline, i)
+        res[j] = spline_single_knot_eval(x_loc, spline, i)
 
     return res
 
 
 class AkimaSpline:
-    """Python class to manage akima splines"""
+    """Python class to manage akima splines."""
 
     def __init__(
         self,
@@ -436,8 +443,10 @@ class AkimaSpline:
         denom_small_cut: float = np.nan,
         linear_vector_calls: int = 0
     ) -> None:
-        """Create an akima spline object
-        inputs:
+        """Create an akima spline object.
+
+        Parameters
+        ----------
             x:
                 array of monotonically increasing spline control points (must be at least 5)
             y:
@@ -459,13 +468,13 @@ class AkimaSpline:
         # record the inputs
         assert linear_vector_calls in (0, 1)
 
-        self.ext = ext
-        self.denom_small_cut = denom_small_cut
-        self.linear_vector_calls = linear_vector_calls
+        self.ext: int = ext
+        self.denom_small_cut: float = denom_small_cut
+        self.linear_vector_calls: int = linear_vector_calls
 
         # parse the input corner model
         if corner_model in ('non-rounded', 0):
-            self.corner_model = 0
+            self.corner_model: int = 0
         elif corner_model in ('akima', 1):
             self.corner_model = 1
         elif corner_model in ('makima', 2):
@@ -488,7 +497,7 @@ class AkimaSpline:
                 self.denom_small_cut = 1.e-9
 
         # get the spline object
-        self.spline = akima_create_helper(
+        self.spline: SplineCoeffs = akima_create_helper(
                 x.copy(),
                 y.copy(),
                 corner_model=self.corner_model,
@@ -499,15 +508,19 @@ class AkimaSpline:
     def __call__(self, xint: float) -> float: ...
     @overload
     def __call__(self, xint: NDArray[np.floating]) -> NDArray[np.floating]: ...
-    def __call__(self, xint):
+    def __call__(self, xint: float | NDArray[np.floating]) -> float | NDArray[np.floating]:
         """
-        Call the akima spline object
-        inputs:
-                xint:
-                    either a scalar or array of points at which to evaluate the spline
-        outputs:
-                res:
-                    scalar or array of same size as xint containing the spline evaluated at requested points
+        Call the akima spline object.
+
+        Parameters
+        ----------
+        xint NDArray[np.floating] | float:
+            either a scalar or array of points at which to evaluate the spline
+
+        Returns
+        -------
+        res NDArray[np.floating] | float:
+            scalar or array of same size as xint containing the spline evaluated at requested points
         """
         if isinstance(xint, np.ndarray):
             if self.linear_vector_calls == 1:
