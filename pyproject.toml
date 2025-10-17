@@ -13,6 +13,9 @@ dependencies = [
 ]
 requires-python = ">=3.7"
 
+[tool.setuptools.packages.find]
+include = ["pyakima*"]
+
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"

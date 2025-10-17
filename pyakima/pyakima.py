@@ -50,7 +50,7 @@ class SplineCoeffs(NamedTuple):
 
 
 @njit()
-def akima_create_helper(x: NDArray[np.floating], y: NDArray[np.floating], *, corner_model: int = 0, denom_small_cut: float = 0.) -> SplineCoeffs:
+def akima_create_helper(x: NDArray[np.floating], y: NDArray[np.floating], corner_model: int = 0, denom_small_cut: float = 0.) -> SplineCoeffs:
     """
     Precompute the coefficients necessary to handle akima splines.
 
@@ -136,7 +136,7 @@ def akima_create_helper(x: NDArray[np.floating], y: NDArray[np.floating], *, cor
         sharp_corners = False
         # denom_small_cut should be zero to match makima
     else:
-        msg = 'Unrecognized option for corner model'
+        msg = f'Unrecognized option for corner model {corner_model}'
         raise ValueError(msg)
 
     # the numerically computed local slopes
@@ -304,7 +304,7 @@ def cubic_call_scalar(xint: float, spline: SplineCoeffs, ext: int) -> float:
         y_bound_low = np.nan
         y_bound_high = np.nan
     else:
-        msg = 'Unrecognized option for extrapolation'
+        msg = f'Unrecognized option for extrapolation: {ext}'
         raise ValueError(msg)
 
     # for constant boundary value handling
@@ -404,7 +404,7 @@ def cubic_call_vector(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int
         y_bound_low = np.nan
         y_bound_high = np.nan
     else:
-        msg = 'Unrecognized option for extrapolation'
+        msg = f'Unrecognized option for extrapolation: {ext}'
         raise ValueError(msg)
 
     res = np.zeros(xint.size)
@@ -512,7 +512,7 @@ class AkimaSpline:
         elif corner_model in ('makima', 2):
             self.corner_model = 2
         else:
-            msg = 'Unrecognized option for corner model'
+            msg = f'Unrecognized option for corner model: {corner_model}'
             raise ValueError(msg)
 
         # default values for the denominator cutoff depend on the method
