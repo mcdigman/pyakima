@@ -12,6 +12,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, NamedTuple, overload
 
+import numba
+import numba.extending
 import numpy as np
 from numba import njit
 
@@ -322,37 +324,6 @@ def cubic_call_scalar(xint: float, spline: SplineCoeffs, ext: int) -> float:
 
 
 @njit()
-def cubic_call_vector_linear(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int) -> NDArray[np.floating]:
-    """
-    Evaluate akima splines with a scalar input.
-
-    Helper similar to cubic_call_vector (see more discussion there), but make loop iterations uncorrelated.
-    This method may be faster if xint not at least partially sorted
-    or on some compute architectures (this method is more readily parallelizable)
-
-    Parameters
-    ----------
-    xint: NDArray[np.floating]
-        array of points at which to evaluate the spline
-    spline: SplineCoeffs
-        a SplineCoeffs object representing the spline with points to evaluate
-    ext: int
-        integer flag to select method of bounds handling
-
-    Returns
-    -------
-    NDArray[np.floating]
-        array of same size as xint containing interpolated y values
-    """
-    res = np.zeros(xint.size)
-    # iterate over every input point
-    for j in range(xint.size):
-        # let cubic_call_scalar handle finding the correct subspline and evaluating
-        res[j] = cubic_call_scalar(xint[j], spline, ext)
-    return res
-
-
-@njit()
 def cubic_call_vector(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int) -> NDArray[np.floating]:
     """
     Evaluate akima splines with a vector input.
@@ -457,6 +428,78 @@ def cubic_call_vector(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int
     return res
 
 
+@overload
+def cubic_call(xint: float, spline: SplineCoeffs, ext: int) -> float: ...
+@overload
+def cubic_call(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int) -> NDArray[np.floating]: ...
+def cubic_call(xint: float | NDArray[np.floating], spline: SplineCoeffs, ext: int) -> float | NDArray[np.floating]:
+    # implement in the select function
+    if isinstance(xint, np.ndarray):
+        return cubic_call_vector(xint, spline, ext)
+    if isinstance(xint, (float, np.floating, numba.types.Float)):
+        return cubic_call_scalar(xint, spline, ext)
+    msg = 'Unsuported type of input'
+    raise TypeError(msg)
+
+
+# @overload
+# def select_cubic_call(xint: float, spline: SplineCoeffs, ext: int) -> float: ...
+# @overload
+# def select_cubic_call(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int) -> NDArray[np.floating]: ...
+@numba.extending.overload(cubic_call)
+# def select_cubic_call(xint: float | NDArray[np.floating], spline: SplineCoeffs, ext: int) -> float | NDArray[np.floating]:
+def _select_cubic_call(xint, spline, ext):  # noqa: ANN001, ANN202
+    assert isinstance(ext, numba.types.Integer)
+    assert isinstance(spline, numba.types.NamedTuple)
+    if isinstance(xint, numba.types.Float):
+        def temp(xint, spline, ext):  # noqa: ANN001, ANN202 # type: ignore[reportRedeclaration]
+            return cubic_call_scalar(xint, spline, ext)
+    elif isinstance(xint, numba.types.Array):
+        def temp(xint, spline, ext):  # noqa: ANN001, ANN202 # type: ignore[reportRedeclaration]
+            return cubic_call_vector(xint, spline, ext)
+    else:
+        print(type(xint))
+        print(type(spline))
+        print(type(ext))
+        msg = 'Unsuported type of input: ' + str(type(xint))
+        raise TypeError(msg)
+    return temp
+
+
+# numba.extending.overload(select_cubic_call)(lambda xint, spline, ext: select_cubic_call)
+
+
+@njit()
+def cubic_call_vector_linear(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int) -> NDArray[np.floating]:
+    """
+    Evaluate akima splines with a scalar input.
+
+    Helper similar to cubic_call_vector (see more discussion there), but make loop iterations uncorrelated.
+    This method may be faster if xint not at least partially sorted
+    or on some compute architectures (this method is more readily parallelizable)
+
+    Parameters
+    ----------
+    xint: NDArray[np.floating]
+        array of points at which to evaluate the spline
+    spline: SplineCoeffs
+        a SplineCoeffs object representing the spline with points to evaluate
+    ext: int
+        integer flag to select method of bounds handling
+
+    Returns
+    -------
+    NDArray[np.floating]
+        array of same size as xint containing interpolated y values
+    """
+    res = np.zeros(xint.size)
+    # iterate over every input point
+    for j in range(xint.size):
+        # let cubic_call_scalar handle finding the correct subspline and evaluating
+        res[j] = cubic_call_scalar(xint[j], spline, ext)
+    return res
+
+
 class AkimaSpline:
     """Python class to manage akima splines."""
 
@@ -554,8 +597,6 @@ class AkimaSpline:
         res: NDArray[np.floating] | float
             scalar or array of same size as xint containing the spline evaluated at requested points
         """
-        if isinstance(xint, np.ndarray):
-            if self.linear_vector_calls == 1:
-                return cubic_call_vector_linear(xint, self.spline, self.ext)
-            return cubic_call_vector(xint, self.spline, self.ext)
-        return cubic_call_scalar(xint, self.spline, self.ext)
+        if isinstance(xint, np.ndarray) and self.linear_vector_calls == 1:
+            return cubic_call_vector_linear(xint, self.spline, self.ext)
+        return cubic_call(xint, self.spline, self.ext)
