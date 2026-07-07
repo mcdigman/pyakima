@@ -296,9 +296,12 @@ def cubic_call_scalar(xint: float, spline: SplineCoeffs, ext: int) -> float:
     n_control = spline.n_control
 
     # handle out of bounds
-    if ext == 1:
-        y_bound_low: float = 0.
-        y_bound_high: float = 0.
+    if ext == 0:
+        y_bound_low: float = np.nan
+        y_bound_high: float = np.nan
+    elif ext == 1:
+        y_bound_low = 0.
+        y_bound_high = 0.
     elif ext == 3:
         y_bound_low = float(spline.y[0])
         y_bound_high = float(spline.y[-1])
@@ -310,9 +313,9 @@ def cubic_call_scalar(xint: float, spline: SplineCoeffs, ext: int) -> float:
         raise ValueError(msg)
 
     # for constant boundary value handling
-    if xint < spline.x[0]:
+    if xint < spline.x[0] and ext != 0:
         return y_bound_low
-    if xint > spline.x[-1]:
+    if xint > spline.x[-1] and ext != 0:
         return y_bound_high
     # find the proper subspline
     for i in range(n_control - 2):
@@ -365,9 +368,12 @@ def cubic_call_vector(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int
     n_control = spline.n_control
 
     # boundary value handling
-    if ext == 1:
-        y_bound_low: float = 0.
-        y_bound_high: float = 0.
+    if ext == 0:
+        y_bound_low: float = np.nan
+        y_bound_high: float = np.nan
+    elif ext == 1:
+        y_bound_low = 0.
+        y_bound_high = 0.
     elif ext == 3:
         y_bound_low = float(spline.y[0])
         y_bound_high = float(spline.y[-1])
@@ -396,13 +402,13 @@ def cubic_call_vector(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int
 
         x_loc = float(xint[j])
 
-        if x_loc < spline.x[0]:
+        if x_loc < spline.x[0] and ext != 0:
             res[j] = y_bound_low
             last_idx = 0
             continue
 
         if x_loc >= spline.x[n_control - 2]:
-            if x_loc <= spline.x[n_control - 1]:
+            if x_loc <= spline.x[n_control - 1] or ext == 0:
                 res[j] = spline_single_knot_eval(x_loc, spline, n_control - 2)
                 last_idx = n_control - 2
             else:
