@@ -13,6 +13,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, NamedTuple, overload
 
 import numba
+import numba.core.types
 import numba.extending
 import numpy as np
 from numba import njit
@@ -442,7 +443,7 @@ def cubic_call(xint: float | NDArray[np.floating], spline: SplineCoeffs, ext: in
     # implement in the select function
     if isinstance(xint, np.ndarray):
         return cubic_call_vector(xint, spline, ext)
-    if isinstance(xint, (float, np.floating, numba.types.Float)):
+    if isinstance(xint, (float, np.floating, numba.core.types.Float)):
         return cubic_call_scalar(xint, spline, ext)
     msg = 'Unsuported type of input'
     raise TypeError(msg)
@@ -455,12 +456,12 @@ def cubic_call(xint: float | NDArray[np.floating], spline: SplineCoeffs, ext: in
 @numba.extending.overload(cubic_call)
 # def select_cubic_call(xint: float | NDArray[np.floating], spline: SplineCoeffs, ext: int) -> float | NDArray[np.floating]:
 def _select_cubic_call(xint, spline, ext):  # noqa: ANN001, ANN202
-    assert isinstance(ext, numba.types.Integer)
-    assert isinstance(spline, numba.types.NamedTuple)
-    if isinstance(xint, numba.types.Float):
+    assert isinstance(ext, numba.core.types.Integer)
+    assert isinstance(spline, numba.core.types.NamedTuple)
+    if isinstance(xint, numba.core.types.Float):
         def temp(xint, spline, ext):  # noqa: ANN001, ANN202 # type: ignore[reportRedeclaration]
             return cubic_call_scalar(xint, spline, ext)
-    elif isinstance(xint, numba.types.Array):
+    elif isinstance(xint, numba.core.types.Array):
         def temp(xint, spline, ext):  # noqa: ANN001, ANN202 # type: ignore[reportRedeclaration]
             return cubic_call_vector(xint, spline, ext)
     else:
