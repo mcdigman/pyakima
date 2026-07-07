@@ -7,15 +7,93 @@ authors = [
   { name="Matthew C. Digman", email="matthew.digman@vanderbilt.edu" }
 ]
 license = { file = "LICENSE" }
+# Utility package: keep the runtime floors low so it installs broadly. These
+# floors are also the "version-floor" end of the build matrix in
+# .github/workflows/build.yml (uv's lowest-direct resolution installs exactly
+# these), so they are exercised in CI.
+#   - numpy 1.22 is the oldest release with cp310 wheels that numba 0.56 accepts.
+#   - numba 0.56 is the oldest release with cp310 wheels; it caps numpy at <1.24,
+#     so the floor pair (numpy 1.22 + numba 0.56) resolves together on 3.10.
 dependencies = [
-    "numpy",
-    "numba",
+    "numpy>=1.22",
+    "numba>=0.56",
 ]
-requires-python = ">=3.7"
+requires-python = ">=3.10"
 
-[tool.setuptools.packages.find]
-include = ["pyakima*"]
+[project.optional-dependencies]
+# Development / test tooling. The linters and type-checkers here are also wired
+# up as prek hooks (.pre-commit-config.yaml) and in the CI workflows: ruff +
+# pyrefly run via prek in lint.yml, mypy + pyright run in typecheck.yml, and
+# pytest runs in test.yml. Left unpinned (or on a low floor) so CI always uses
+# the current releases.
+dev = [
+    "pytest>=7.0",
+    "ruff",
+    "mypy",
+    "pyright",
+    "pyrefly",
+    "prek",
+]
+# Optional dependencies for the scripts under demos/. scipy and matplotlib are
+# pip-installable; pygsl_lite (used by speed_demo.py) is not reliably available
+# on PyPI, so it is intentionally left out and must be installed separately to
+# run that comparison.
+demos = [
+    "scipy",
+    "matplotlib",
+]
+
+[tool.pyrefly]
+# pyrefly runs as a prek hook (.pre-commit-config.yaml) and resolves the typed
+# packages listed in that hook's additional_dependencies (numpy ships py.typed).
+# demos/ pulls in scipy/matplotlib/pygsl_lite, which the hook does not install,
+# so it is excluded here.
+project-includes = [
+    "**/*.py*",
+    "**/*.ipynb",
+]
+project-excludes = [
+    "demos/**",
+]
+
+[tool.pyright]
+# Settings for the pyright job in .github/workflows/typecheck.yml. pyright
+# resolves types from the installed environment (the CI job installs .[dev]),
+# so numpy is checked for real via its py.typed marker. numba ships no py.typed,
+# so its missing-import reporting is disabled here.
+pythonVersion = "3.10"
+reportMissingImports = "none"
+# Exclude dot-directories (e.g. the CI job's .venv) so pyright does not
+# type-check installed dependencies, the "build" copy the wheel build creates,
+# and demos/ (which needs scipy/matplotlib/pygsl_lite not installed in CI).
+exclude = ["**/node_modules", "**/__pycache__", "**/.*", "build", "demos"]
+
+[tool.mypy]
+# The mypy job in .github/workflows/typecheck.yml runs mypy without installing
+# the project, so third-party imports are resolved with --ignore-missing-imports
+# on the command line. numba is called out explicitly here (it ships no py.typed)
+# so that runs which DO have the deps installed (local/editor) still ignore it.
+# demos/ is excluded (it imports pygsl_lite, which has no types).
+exclude = [
+    "^demos/",
+]
+
+[[tool.mypy.overrides]]
+module = ["numba", "numba.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+# Real unit tests live in tests/. There are none yet -- the directory is a
+# placeholder so pytest has a target; the test.yml workflow treats "no tests
+# collected" as a pass until the first tests land.
+testpaths = ["tests"]
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
+
+# Only the pyakima library is an installable package; demos/ and tests/ are not
+# part of the distribution. Pin discovery so setuptools' flat-layout
+# auto-discovery doesn't error on multiple top-level directories.
+[tool.setuptools.packages.find]
+include = ["pyakima*"]

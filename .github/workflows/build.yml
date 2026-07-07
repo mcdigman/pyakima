@@ -1,0 +1,70 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          python-version: "3.13"
+          cache-dependency-glob: "**/pyproject.toml"
+
+      - name: Build sdist and wheel
+        run: uv build
+
+      - name: Check distribution metadata
+        run: uvx twine check dist/*
+
+      - name: Upload distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/*
+          if-no-files-found: error
+
+  install:
+    # Confirm the package installs and imports both at the declared dependency
+    # floors (oldest Python + lowest-direct resolution -> numpy 1.22 / numba
+    # 0.56) and against the latest releases (modern Python + highest resolution).
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - python-version: "3.10"
+            resolution: lowest-direct
+          - python-version: "3.13"
+            resolution: highest
+    name: install (py${{ matrix.python-version }}, ${{ matrix.resolution }})
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          python-version: ${{ matrix.python-version }}
+          cache-dependency-glob: "**/pyproject.toml"
+
+      - name: Install project (${{ matrix.resolution }} resolution)
+        run: |
+          uv venv --python ${{ matrix.python-version }}
+          uv pip install --resolution ${{ matrix.resolution }} .
+
+      - name: Import check
+        run: .venv/bin/python -c "import pyakima; from pyakima import AkimaSpline; print(pyakima.__file__)"
