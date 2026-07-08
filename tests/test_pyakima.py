@@ -60,6 +60,45 @@ def _assert_coefficients_equal(actual: SplineCoeffs, expected: SplineCoeffs, *, 
         _assert_same_float_values(getattr(actual, name), getattr(expected, name), maxulp=maxulp)
 
 
+def _outside_interval_mask(size: int, first: int, last: int) -> np.ndarray:
+    mask = np.ones(size, dtype=bool)
+    mask[max(first, 0) : min(last + 1, size)] = False
+    return mask
+
+
+def _interval_slice(size: int, first: int, last: int) -> slice:
+    return slice(max(first, 0), min(last + 1, size))
+
+
+def _assert_component_unchanged_outside_interval(
+    baseline: SplineCoeffs,
+    actual: SplineCoeffs,
+    component: str,
+    first: int,
+    last: int,
+) -> None:
+    baseline_values = getattr(baseline, component)
+    actual_values = getattr(actual, component)
+    mask = _outside_interval_mask(baseline_values.size, first, last)
+    _assert_same_float_values(actual_values[mask], baseline_values[mask], maxulp=0)
+
+
+def _power_of_two(dtype: type[np.floating], exponent: int) -> np.floating:
+    return dtype(np.ldexp(1.0, exponent))
+
+
+def _power_of_two_affine_points(
+    dtype: type[np.floating],
+    *,
+    h_exponent: int,
+    slope_exponent: int,
+) -> tuple[np.ndarray, np.ndarray, np.floating]:
+    h = _power_of_two(dtype, h_exponent)
+    delta_y = _power_of_two(dtype, h_exponent + slope_exponent)
+    index = np.arange(12, dtype=dtype)
+    return index * h, index * delta_y, _power_of_two(dtype, slope_exponent)
+
+
 @pytest.mark.parametrize('corner_model', [0, 1, 2, 'non-rounded', 'akima', 'makima'])
 def test_minimum_length_affine_spline_reproduces_line_for_all_corner_models(corner_model: int | str) -> None:
     x, y = _affine_control_points()
@@ -336,6 +375,181 @@ def test_nonfinite_y_contaminates_local_region_but_leaves_distant_finite_values_
     _assert_same_float_values(actual[[0, 1, 4]], (2 * xint + 1)[[0, 1, 4]])
     assert np.isnan(actual[2])
     assert np.isnan(actual[3])
+
+
+@pytest.mark.parametrize('dtype', [np.float32, np.float64])
+@pytest.mark.parametrize('corner_model', [0, 1, 2])
+def test_large_dynamic_range_control_point_has_strict_local_coefficient_kernel(
+    dtype: type[np.floating],
+    corner_model: int,
+) -> None:
+    x = np.arange(17, dtype=dtype)
+    y = np.array(
+        [
+            0.0,
+            0.25,
+            -0.5,
+            0.125,
+            0.75,
+            -0.25,
+            0.375,
+            -0.625,
+            0.5,
+            -0.125,
+            0.875,
+            0.0,
+            -0.375,
+            0.625,
+            -0.75,
+            0.25,
+            -0.125,
+        ],
+        dtype=dtype,
+    )
+    changed = y.copy()
+    changed_index = 8
+    changed[changed_index] = _power_of_two(dtype, 90 if dtype is np.float32 else 900)
+
+    baseline = akima_create_helper(x, y, corner_model=corner_model)
+    large_dynamic_range = akima_create_helper(x, changed, corner_model=corner_model)
+
+    _assert_component_unchanged_outside_interval(baseline, large_dynamic_range, 'a', changed_index, changed_index)
+    _assert_component_unchanged_outside_interval(
+        baseline,
+        large_dynamic_range,
+        'b',
+        changed_index - 2,
+        changed_index + 2,
+    )
+    for component in ('c', 'd'):
+        _assert_component_unchanged_outside_interval(
+            baseline,
+            large_dynamic_range,
+            component,
+            changed_index - 3,
+            changed_index + 2,
+        )
+
+    assert large_dynamic_range.a[changed_index] != baseline.a[changed_index]
+    b_kernel = _interval_slice(large_dynamic_range.b.size, changed_index - 2, changed_index + 2)
+    cd_kernel = _interval_slice(large_dynamic_range.c.size, changed_index - 3, changed_index + 2)
+    assert not np.array_equal(large_dynamic_range.b[b_kernel], baseline.b[b_kernel])
+    assert not np.array_equal(large_dynamic_range.c[cd_kernel], baseline.c[cd_kernel])
+    assert not np.array_equal(large_dynamic_range.d[cd_kernel], baseline.d[cd_kernel])
+
+
+@pytest.mark.parametrize('dtype', [np.float32, np.float64])
+def test_overflowing_control_value_differences_are_confined_to_strict_coefficient_kernel(
+    dtype: type[np.floating],
+) -> None:
+    x = np.arange(16, dtype=dtype)
+    y = (np.sin(np.arange(16)) * 0.125).astype(dtype)
+    baseline = akima_create_helper(x, y)
+
+    changed = y.copy()
+    changed_index = 7
+    changed[changed_index] = np.finfo(dtype).max
+    changed[changed_index + 1] = -np.finfo(dtype).max
+    overflowed = akima_create_helper(x, changed)
+
+    _assert_component_unchanged_outside_interval(baseline, overflowed, 'a', changed_index, changed_index + 1)
+    _assert_component_unchanged_outside_interval(baseline, overflowed, 'b', changed_index - 2, changed_index + 3)
+    for component in ('c', 'd'):
+        _assert_component_unchanged_outside_interval(
+            baseline,
+            overflowed,
+            component,
+            changed_index - 3,
+            changed_index + 3,
+        )
+
+    b_kernel = _interval_slice(overflowed.b.size, changed_index - 2, changed_index + 3)
+    cd_kernel = _interval_slice(overflowed.c.size, changed_index - 3, changed_index + 3)
+    assert np.any(~np.isfinite(overflowed.b[b_kernel]))
+    assert np.any(~np.isfinite(overflowed.c[cd_kernel]))
+    assert np.any(~np.isfinite(overflowed.d[cd_kernel]))
+
+
+@pytest.mark.parametrize('dtype', [np.float32, np.float64])
+def test_subnormal_x_spacing_division_overflow_returns_nonfinite_local_coefficients(
+    dtype: type[np.floating],
+) -> None:
+    step = np.nextafter(dtype(0), dtype(1), dtype=dtype)
+    x = np.array([-3.0, -2.0, -1.0, 0.0, step, 1.0, 2.0, 3.0, 4.0, 5.0], dtype=dtype)
+    y = np.array([0.0, 0.5, -0.25, 0.0, 1.0, 0.25, -0.5, 0.75, 0.1, -0.2], dtype=dtype)
+
+    clean_x = x.copy()
+    clean_x[4] = dtype(0.5)
+    baseline = akima_create_helper(clean_x, y)
+    tiny_interval = akima_create_helper(x, y)
+
+    _assert_component_unchanged_outside_interval(baseline, tiny_interval, 'a', 0, -1)
+    _assert_component_unchanged_outside_interval(baseline, tiny_interval, 'b', 2, 6)
+    for component in ('c', 'd'):
+        _assert_component_unchanged_outside_interval(baseline, tiny_interval, component, 1, 6)
+
+    b_kernel = _interval_slice(tiny_interval.b.size, 2, 6)
+    cd_kernel = _interval_slice(tiny_interval.c.size, 1, 6)
+    assert np.any(~np.isfinite(tiny_interval.b[b_kernel]))
+    assert np.any(~np.isfinite(tiny_interval.c[cd_kernel]))
+    assert np.any(~np.isfinite(tiny_interval.d[cd_kernel]))
+
+
+@pytest.mark.parametrize(
+    ('dtype', 'h_exponent', 'slope_exponent'),
+    [(np.float32, -50, 125), (np.float64, -500, 1021)],
+)
+def test_near_overflow_affine_spline_keeps_zero_higher_order_coefficients(
+    dtype: type[np.floating],
+    h_exponent: int,
+    slope_exponent: int,
+) -> None:
+    x, y, slope = _power_of_two_affine_points(dtype, h_exponent=h_exponent, slope_exponent=slope_exponent)
+
+    spline = akima_create_helper(x, y)
+
+    expected_slope = np.full(spline.b.shape, float(slope), dtype=spline.b.dtype)
+    _assert_same_float_values(spline.b, expected_slope, maxulp=4)
+    np.testing.assert_array_equal(spline.c, np.zeros_like(spline.c))
+    np.testing.assert_array_equal(spline.d, np.zeros_like(spline.d))
+
+
+@pytest.mark.parametrize(
+    ('dtype', 'h_exponent', 'slope_exponent'),
+    [(np.float32, -50, 127), (np.float64, -500, 1023)],
+)
+def test_actual_multiplier_overflow_in_affine_spline_produces_ieee_nonfinite_coefficients(
+    dtype: type[np.floating],
+    h_exponent: int,
+    slope_exponent: int,
+) -> None:
+    x, y, _ = _power_of_two_affine_points(dtype, h_exponent=h_exponent, slope_exponent=slope_exponent)
+
+    spline = akima_create_helper(x, y)
+
+    assert np.all(np.isfinite(spline.a))
+    assert np.any(~np.isfinite(spline.b))
+    assert np.any(~np.isfinite(spline.c))
+    assert np.any(~np.isfinite(spline.d))
+
+
+def test_single_knot_eval_preserves_ieee_zero_times_infinity() -> None:
+    spline = SplineCoeffs(
+        x=np.array([0.0, 1.0]),
+        y=np.array([1.0, 2.0]),
+        n_control=2,
+        a=np.array([1.0]),
+        b=np.array([np.inf]),
+        c=np.array([0.0]),
+        d=np.array([0.0]),
+    )
+
+    scalar_at_knot = spline_single_knot_eval(0.0, spline, 0)
+    vector_values = spline_single_knot_eval(np.array([0.0, 1.0]), spline, 0)
+
+    assert np.isnan(scalar_at_knot)
+    assert np.isnan(vector_values[0])
+    assert vector_values[1] == np.inf
 
 
 @pytest.mark.parametrize('dtype', [np.float32, np.float64])
