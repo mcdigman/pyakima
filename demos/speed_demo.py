@@ -22,6 +22,7 @@ if PROJECT_ROOT not in sys.path:
 
 from pyakima import (  # noqa: E402
     AkimaSpline,
+    SplineCoeffs,
     akima_create_helper,
     cubic_call,
     cubic_call_scalar,
@@ -260,6 +261,14 @@ def _call_alternate(spline: object, model: ModelCase, xint: float | np.ndarray) 
     return _call_python_spline(spline, xint)
 
 
+@numba.njit()
+def _cubic_call_scalar_grid_jit(x_scalars: np.ndarray, spline: SplineCoeffs, ext: int) -> float:
+    total = 0.0
+    for x_scalar in x_scalars:
+        total += cubic_call_scalar(float(x_scalar), spline, ext)
+    return total
+
+
 def _run_loop(callback: Callable[[], object], loops: int) -> float:
     start = perf_counter()
     for _ in range(loops):
@@ -303,6 +312,14 @@ def _time_scalar_grid_optional(callback: Callable[[float], object], x_scalars: n
         return _time_scalar_grid_required(callback, x_scalars)
     except Exception as exc:  # noqa: BLE001 - optional backends should skip cleanly.
         return Timing(None, reason=f'{type(exc).__name__}: {exc}')
+
+
+def _time_scalar_jit_grid_required(x_scalars: np.ndarray, spline: SplineCoeffs) -> Timing:
+    timing = _time_required(lambda: _cubic_call_scalar_grid_jit(x_scalars, spline, EXT))
+    if timing.seconds is None:
+        msg = 'required jitted scalar-grid timing unexpectedly failed'
+        raise RuntimeError(msg)
+    return Timing(timing.seconds / x_scalars.size, timing.loops * x_scalars.size)
 
 
 def _format_time(timing: Timing) -> str:
@@ -394,6 +411,7 @@ def _scalar_rows(options: DemoOptions) -> list[tuple[str, ...]]:
                 lambda x_scalar, coeffs=coeffs: cubic_call_scalar(x_scalar, coeffs, EXT),
                 x_scalars,
             )
+            scalar_jit_time = _time_scalar_jit_grid_required(x_scalars, coeffs)
             pyakima_timings = [scalar_time]
             overhead_cells: tuple[str, ...] = ()
             if options.show_overhead:
@@ -428,6 +446,7 @@ def _scalar_rows(options: DemoOptions) -> list[tuple[str, ...]]:
                     str(n_control),
                     *overhead_cells,
                     _format_time(scalar_time),
+                    _format_time(scalar_jit_time),
                     _format_time(alternate_time),
                     _format_speedup(pyakima_timings, alternate_time),
                 )
@@ -524,6 +543,10 @@ def main() -> None:
             'evaluation tables use gsl-style and makima-backed scipy-style rows; '
             'pass --show-all-call-models for all models'
         )
+    print(
+        'scalar fn is one Python call per point; scalar jit loops over the same points inside njit '
+        'and is excluded from py-call speedup'
+    )
 
     _print_availability()
     _print_table(
@@ -545,8 +568,9 @@ def main() -> None:
             'n_ctrl',
             *scalar_overhead_columns,
             'scalar fn',
+            'scalar jit',
             'alt time',
-            'py speedup',
+            'py-call speedup',
         ),
         _scalar_rows(options),
     )
