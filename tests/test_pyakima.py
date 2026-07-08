@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
+from numba import njit
 
 from pyakima.pyakima import (
     AkimaSpline,
@@ -58,6 +59,11 @@ def _assert_coefficients_equal(actual: SplineCoeffs, expected: SplineCoeffs, *, 
     assert actual.n_control == expected.n_control
     for name in ('x', 'y', 'a', 'b', 'c', 'd'):
         _assert_same_float_values(getattr(actual, name), getattr(expected, name), maxulp=maxulp)
+
+
+def _single_knot_derivative(xint: float, spline: SplineCoeffs, i: int) -> float:
+    dx = xint - spline.x[i]
+    return spline.b[i] + 2.0 * spline.c[i] * dx + 3.0 * spline.d[i] * dx**2
 
 
 def _outside_interval_mask(size: int, first: int, last: int) -> np.ndarray:
@@ -115,25 +121,25 @@ def test_minimum_length_affine_spline_reproduces_line_for_all_corner_models(corn
 def test_create_rejects_length_mismatch_and_nonincreasing_controls() -> None:
     x, y = _affine_control_points()
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError, match='Need at least 5 control points'):
         akima_create_helper(x[:4], y[:4])
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError, match='Input sizes must match'):
         akima_create_helper(x, y[:-1])
 
     duplicate_x = x.copy()
     duplicate_x[2] = duplicate_x[1]
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError, match='x must be monotonically increasing'):
         akima_create_helper(duplicate_x, y)
 
     decreasing_x = x.copy()
     decreasing_x[2] = decreasing_x[1] - 1.0
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError, match='x must be monotonically increasing'):
         akima_create_helper(decreasing_x, y)
 
     nan_x = x.copy()
     nan_x[2] = np.nan
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError, match='x must be monotonically increasing'):
         akima_create_helper(nan_x, y)
 
 
@@ -196,9 +202,48 @@ def test_explicit_denominator_cut_changes_corner_branch_when_large_enough() -> N
 
     assert no_cut.denom_small_cut == 0.0
     assert large_cut.denom_small_cut == 10.0
-    assert not np.array_equal(no_cut.spline.b, large_cut.spline.b)
-    assert not np.array_equal(no_cut.spline.c, large_cut.spline.c)
-    assert not np.array_equal(no_cut.spline.d, large_cut.spline.d)
+    _assert_same_float_values(
+        no_cut.spline.b,
+        np.array([0.0, 11.0 / 7.0, 2.0, 2.0, 2.0, 17.0 / 7.0]),
+    )
+    _assert_same_float_values(
+        large_cut.spline.b,
+        np.array([0.0, 2.0, 0.5, 2.0, 3.5, 2.0]),
+    )
+    _assert_same_float_values(
+        large_cut.spline.c,
+        np.array([1.0, 4.5, -9.0, 10.5, -6.0, 1.0]),
+    )
+    _assert_same_float_values(
+        large_cut.spline.d,
+        np.array([0.0, -3.5, 6.5, -6.5, 3.5, 0.0]),
+    )
+
+
+@pytest.mark.parametrize('denom_small_cut', [-1.0, np.inf, -np.inf, np.nan])
+def test_create_helper_rejects_negative_or_nonfinite_denominator_cut(denom_small_cut: float) -> None:
+    x, y = _nonlinear_control_points()
+
+    with pytest.raises(ValueError, match='denom_small_cut must be non-negative and finite'):
+        akima_create_helper(x, y, denom_small_cut=denom_small_cut)
+
+
+@pytest.mark.parametrize('denom_small_cut', [-1.0, np.inf, -np.inf])
+def test_akima_spline_rejects_negative_or_nonfinite_explicit_denominator_cut(denom_small_cut: float) -> None:
+    x, y = _nonlinear_control_points()
+
+    with pytest.raises(ValueError, match='denom_small_cut must either be non-negative and finite or nan'):
+        AkimaSpline(x, y, denom_small_cut=denom_small_cut)
+
+
+def test_akima_spline_accepts_nan_default_and_zero_denominator_cut() -> None:
+    x, y = _nonlinear_control_points()
+
+    defaulted = AkimaSpline(x, y, denom_small_cut=np.nan)
+    explicit_zero = AkimaSpline(x, y, denom_small_cut=0.0)
+
+    assert defaulted.denom_small_cut == 0.0
+    assert explicit_zero.denom_small_cut == 0.0
 
 
 @pytest.mark.parametrize('linear_vector_calls', [0, 1])
@@ -212,10 +257,10 @@ def test_linear_vector_calls_keyword_does_not_change_values(linear_vector_calls:
     _assert_same_float_values(actual, baseline, maxulp=4)
 
 
-def test_invalid_linear_vector_calls_raises_assertion_error() -> None:
+def test_invalid_linear_vector_calls_raises_value_error() -> None:
     x, y = _affine_control_points()
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError, match='linear_vector_calls must be in'):
         AkimaSpline(x, y, linear_vector_calls=2)
 
 
@@ -229,6 +274,115 @@ def test_single_knot_eval_accepts_scalar_and_vector_inputs() -> None:
 
     assert scalar == 3.5
     np.testing.assert_array_equal(vector, 2 * vector_x + 1)
+
+
+@pytest.mark.parametrize('corner_model', [0, 1])
+def test_non_affine_basic_akima_coefficients_match_hand_computed_values(corner_model: int) -> None:
+    x = np.arange(6, dtype=np.float64)
+    y = np.array([0.0, 1.0, 3.0, 7.0, 14.0, 25.0])
+
+    spline = akima_create_helper(x, y, corner_model=corner_model, denom_small_cut=0.0)
+
+    np.testing.assert_array_equal(spline.a, y[:-1])
+    _assert_same_float_values(spline.b, np.array([1.0 / 2.0, 4.0 / 3.0, 5.0 / 2.0, 5.0, 61.0 / 7.0]), maxulp=32)
+    _assert_same_float_values(spline.c, np.array([2.0 / 3.0, 5.0 / 6.0, 2.0, 16.0 / 7.0, 18.0 / 7.0]), maxulp=32)
+    _assert_same_float_values(
+        spline.d,
+        np.array([-1.0 / 6.0, -1.0 / 6.0, -1.0 / 2.0, -2.0 / 7.0, -2.0 / 7.0]),
+        maxulp=32,
+    )
+
+
+def test_non_affine_makima_coefficients_match_hand_computed_values() -> None:
+    x = np.arange(6, dtype=np.float64)
+    y = np.array([0.0, 1.0, 3.0, 7.0, 14.0, 25.0])
+
+    spline = akima_create_helper(x, y, corner_model=2, denom_small_cut=0.0)
+
+    np.testing.assert_array_equal(spline.a, y[:-1])
+    _assert_same_float_values(
+        spline.b,
+        np.array([3.0 / 8.0, 16.0 / 13.0, 27.0 / 11.0, 29.0 / 6.0, 25.0 / 3.0]),
+        maxulp=32,
+    )
+    _assert_same_float_values(
+        spline.c,
+        np.array([53.0 / 52.0, 155.0 / 143.0, 149.0 / 66.0, 3.0, 194.0 / 51.0]),
+        maxulp=32,
+    )
+    _assert_same_float_values(
+        spline.d,
+        np.array([-41.0 / 104.0, -45.0 / 143.0, -47.0 / 66.0, -5.0 / 6.0, -58.0 / 51.0]),
+        maxulp=32,
+    )
+
+
+@pytest.mark.parametrize('corner_model', [0, 1, 2])
+def test_subsplines_interpolate_from_left_and_are_c1_continuous_without_sharp_corners(corner_model: int) -> None:
+    x = np.arange(6, dtype=np.float64)
+    y = np.array([0.0, 1.0, 3.0, 7.0, 14.0, 25.0])
+    spline = akima_create_helper(x, y, corner_model=corner_model, denom_small_cut=0.0)
+
+    left_endpoint_values = np.array([spline_single_knot_eval(x[i + 1], spline, i) for i in range(x.size - 1)])
+    _assert_same_float_values(left_endpoint_values, y[1:], maxulp=4)
+
+    left_derivatives = np.array([_single_knot_derivative(float(x[i + 1]), spline, i) for i in range(x.size - 2)])
+    right_derivatives = spline.b[1:]
+    _assert_same_float_values(left_derivatives, right_derivatives, maxulp=4)
+
+
+@pytest.mark.parametrize(
+    ('corner_model', 'denom_small_cut', 'expected_b', 'expected_c', 'expected_d'),
+    [
+        (
+            0,
+            0.0,
+            np.array([1.0, 1.0, 3.0, 3.0, 3.0]),
+            np.array([0.0, 0.0, 0.0, 0.0, 3.0]),
+            np.array([0.0, 0.0, 0.0, 0.0, -1.0]),
+        ),
+        (
+            1,
+            0.0,
+            np.array([1.0, 1.0, 2.0, 3.0, 3.0]),
+            np.array([0.0, -1.0, 2.0, 0.0, 3.0]),
+            np.array([0.0, 1.0, -1.0, 0.0, -1.0]),
+        ),
+        (
+            2,
+            10.0,
+            np.array([1.0, 1.0, 2.0, 3.0, 4.0]),
+            np.array([0.0, -1.0, 2.0, -1.0, 1.0]),
+            np.array([0.0, 1.0, -1.0, 1.0, 0.0]),
+        ),
+    ],
+)
+def test_corner_branch_coefficients_match_sharp_and_rounded_models(
+    corner_model: int,
+    denom_small_cut: float,
+    expected_b: np.ndarray,
+    expected_c: np.ndarray,
+    expected_d: np.ndarray,
+) -> None:
+    x = np.arange(6, dtype=np.float64)
+    y = np.array([0.0, 1.0, 2.0, 5.0, 8.0, 13.0])
+
+    spline = akima_create_helper(x, y, corner_model=corner_model, denom_small_cut=denom_small_cut)
+
+    _assert_same_float_values(spline.b, expected_b)
+    _assert_same_float_values(spline.c, expected_c)
+    _assert_same_float_values(spline.d, expected_d)
+
+
+def test_reachable_zero_left_weight_path_matches_hand_computed_coefficients() -> None:
+    x = np.arange(6, dtype=np.float64)
+    y = np.array([0.0, 1.0, 2.0, 5.0, 10.0, 17.0])
+
+    spline = akima_create_helper(x, y, corner_model=0, denom_small_cut=0.0)
+
+    _assert_same_float_values(spline.b, np.array([1.0, 1.0, 1.0, 4.0, 6.0]))
+    _assert_same_float_values(spline.c, np.array([0.0, 0.0, 3.0, 1.0, 1.0]))
+    _assert_same_float_values(spline.d, np.array([0.0, 0.0, -1.0, 0.0, 0.0]))
 
 
 @pytest.mark.parametrize('corner_model', [0, 1, 2])
@@ -271,6 +425,23 @@ def test_extrapolation_modes_for_scalar_vector_and_class_calls(ext: int, expecte
     _assert_same_float_values(vector_values, expected)
     _assert_same_float_values(linear_vector_values, expected)
     _assert_same_float_values(class_values, expected)
+
+
+@pytest.mark.parametrize(
+    ('ext', 'expected'),
+    [
+        (1, np.array([6.0, 0.0, 0.0, 2.0])),
+        (3, np.array([6.0, 1.0, 9.0, 2.0])),
+        (4, np.array([6.0, np.nan, np.nan, 2.0])),
+    ],
+)
+def test_vector_loop_handles_below_and_above_range_after_initial_point(ext: int, expected: np.ndarray) -> None:
+    x, y = _affine_control_points()
+    spline = AkimaSpline(x, y, ext=ext)
+    xint = np.array([2.5, -1.0, 5.0, 0.5])
+
+    _assert_same_float_values(cubic_call_vector(xint, spline.spline, ext), expected, maxulp=0)
+    _assert_same_float_values(spline(xint), expected, maxulp=0)
 
 
 def test_invalid_extrapolation_mode_raises_for_all_call_paths() -> None:
@@ -316,11 +487,11 @@ def test_scalar_vector_dispatch_and_linear_vector_paths_agree(xint: np.ndarray) 
     class_values = spline(xint)
     linear_class_values = AkimaSpline(x, y, ext=0, linear_vector_calls=1)(xint)
 
-    _assert_same_float_values(vector_values, scalar_values, maxulp=4)
-    _assert_same_float_values(linear_vector_values, scalar_values, maxulp=4)
-    _assert_same_float_values(dispatch_values, scalar_values, maxulp=4)
-    _assert_same_float_values(class_values, scalar_values, maxulp=4)
-    _assert_same_float_values(linear_class_values, scalar_values, maxulp=4)
+    _assert_same_float_values(vector_values, scalar_values, maxulp=0)
+    _assert_same_float_values(linear_vector_values, scalar_values, maxulp=0)
+    _assert_same_float_values(dispatch_values, scalar_values, maxulp=0)
+    _assert_same_float_values(class_values, scalar_values, maxulp=0)
+    _assert_same_float_values(linear_class_values, scalar_values, maxulp=0)
 
 
 def test_cubic_call_rejects_non_float_scalar_and_non_array_inputs() -> None:
@@ -335,6 +506,39 @@ def test_cubic_call_rejects_non_float_scalar_and_non_array_inputs() -> None:
 
     with pytest.raises(TypeError):
         spline(1)
+
+
+def test_numba_overload_rejects_non_integer_ext_type() -> None:
+    x, y = _affine_control_points()
+    spline = AkimaSpline(x, y)
+
+    @njit()
+    def call_with_float_ext(xint: float, spline_coeffs: SplineCoeffs) -> float:
+        return cubic_call(xint, spline_coeffs, 3.0)
+
+    with pytest.raises(TypeError, match='Unsuported type of input'):
+        call_with_float_ext(0.5, spline.spline)
+
+
+def test_numba_overload_rejects_non_spline_type() -> None:
+    @njit()
+    def call_with_float_spline(xint: float) -> float:
+        return cubic_call(xint, 1.0, 3)
+
+    with pytest.raises(TypeError, match='Unsuported type of input'):
+        call_with_float_spline(0.5)
+
+
+def test_numba_overload_rejects_unsupported_xint_type() -> None:
+    x, y = _affine_control_points()
+    spline = AkimaSpline(x, y)
+
+    @njit()
+    def call_with_integer_xint(spline_coeffs: SplineCoeffs) -> float:
+        return cubic_call(1, spline_coeffs, 3)
+
+    with pytest.raises(TypeError, match='Unsuported type of input'):
+        call_with_integer_xint(spline.spline)
 
 
 @pytest.mark.parametrize(
@@ -375,6 +579,39 @@ def test_nonfinite_y_contaminates_local_region_but_leaves_distant_finite_values_
     _assert_same_float_values(actual[[0, 1, 4]], (2 * xint + 1)[[0, 1, 4]])
     assert np.isnan(actual[2])
     assert np.isnan(actual[3])
+
+
+def test_integer_control_arrays_are_accepted_without_integer_output_dtype_guarantee() -> None:
+    x = np.arange(5, dtype=np.int64)
+    y = 2 * x + 1
+    xint = np.array([0.0, 0.5, 2.5, 4.0])
+
+    helper_spline = akima_create_helper(x, y)
+    object_spline = AkimaSpline(x, y, ext=0)
+
+    np.testing.assert_array_equal(helper_spline.b, np.full(x.size - 1, 2.0))
+    np.testing.assert_array_equal(helper_spline.c, np.zeros(x.size - 1))
+    np.testing.assert_array_equal(helper_spline.d, np.zeros(x.size - 1))
+    np.testing.assert_array_equal(object_spline(xint), 2 * xint + 1)
+
+
+def test_non_contiguous_control_arrays_are_accepted() -> None:
+    base_x = np.arange(12, dtype=np.float64)
+    base_y = 3.0 * base_x + 1.0
+    x = base_x[::2]
+    y = base_y[::2]
+    xint = np.array([0.0, 1.0, 5.0, 10.0])
+
+    assert not x.flags.c_contiguous
+    assert not y.flags.c_contiguous
+
+    helper_spline = akima_create_helper(x, y)
+    object_spline = AkimaSpline(x, y, ext=0)
+
+    np.testing.assert_array_equal(helper_spline.b, np.full(x.size - 1, 3.0))
+    np.testing.assert_array_equal(helper_spline.c, np.zeros(x.size - 1))
+    np.testing.assert_array_equal(helper_spline.d, np.zeros(x.size - 1))
+    np.testing.assert_array_equal(object_spline(xint), 3 * xint + 1)
 
 
 @pytest.mark.parametrize('dtype', [np.float32, np.float64])
@@ -470,6 +707,25 @@ def test_overflowing_control_value_differences_are_confined_to_strict_coefficien
     assert np.any(~np.isfinite(overflowed.d[cd_kernel]))
 
 
+def test_finite_control_values_with_nonfinite_differences_produce_local_nan_coefficients() -> None:
+    x = np.arange(8, dtype=np.float64)
+    finite_max = np.finfo(np.float64).max
+    y = np.array([0.0, finite_max, -finite_max, 0.0, 1.0, 2.0, 3.0, 4.0])
+
+    spline = akima_create_helper(x, y)
+
+    assert np.all(np.isfinite(spline.y))
+    with np.errstate(over='ignore'):
+        finite_diff_mask = np.isfinite(np.diff(spline.y))
+    np.testing.assert_array_equal(finite_diff_mask, np.array([True, False, True, True, True, True, True]))
+    np.testing.assert_array_equal(np.isnan(spline.b), np.array([True, True, True, True, False, False, False]))
+    np.testing.assert_array_equal(np.isnan(spline.c), np.array([True, True, True, True, False, False, False]))
+    np.testing.assert_array_equal(np.isnan(spline.d), np.array([True, True, True, True, False, False, False]))
+    np.testing.assert_array_equal(spline.b[4:], np.ones(3))
+    np.testing.assert_array_equal(spline.c[4:], np.zeros(3))
+    np.testing.assert_array_equal(spline.d[4:], np.zeros(3))
+
+
 @pytest.mark.parametrize('dtype', [np.float32, np.float64])
 def test_subnormal_x_spacing_division_overflow_returns_nonfinite_local_coefficients(
     dtype: type[np.floating],
@@ -533,15 +789,23 @@ def test_actual_multiplier_overflow_in_affine_spline_produces_ieee_nonfinite_coe
     assert np.any(~np.isfinite(spline.d))
 
 
-def test_single_knot_eval_preserves_ieee_zero_times_infinity() -> None:
+@pytest.mark.parametrize(
+    ('b', 'c', 'd'),
+    [
+        (np.inf, 0.0, 0.0),
+        (0.0, np.inf, 0.0),
+        (0.0, 0.0, np.inf),
+    ],
+)
+def test_single_knot_eval_preserves_ieee_zero_times_infinity(b: float, c: float, d: float) -> None:
     spline = SplineCoeffs(
         x=np.array([0.0, 1.0]),
         y=np.array([1.0, 2.0]),
         n_control=2,
         a=np.array([1.0]),
-        b=np.array([np.inf]),
-        c=np.array([0.0]),
-        d=np.array([0.0]),
+        b=np.array([b]),
+        c=np.array([c]),
+        d=np.array([d]),
     )
 
     scalar_at_knot = spline_single_knot_eval(0.0, spline, 0)
