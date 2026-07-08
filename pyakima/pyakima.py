@@ -103,12 +103,18 @@ def akima_create_helper(
     """
     # enforce required conditions
     n_control: int = x.size
-    assert n_control > 4
-    assert y.size == x.size
+    if n_control < 5:
+        msg = 'Need at least 5 control points'
+        raise ValueError(msg)
+    if y.size != x.size:
+        msg = 'Input sizes must match'
+        raise ValueError(msg)
 
     # calculate the difference
     xdiffs: NDArray[np.floating] = np.diff(x)
-    assert np.all(xdiffs > 0.0)
+    if not np.all(xdiffs > 0.0):
+        msg = 'x must be monotonically increasing'
+        raise ValueError(msg)
 
     # set boolean variables to control the loop behavior in each corner model case
     if corner_model == 0:
@@ -176,6 +182,9 @@ def akima_create_helper(
         # calculate the denominator cutoff we need with appropriate dimension scaling
         if denom_small_cut == 0.0:
             denom_cut_loc: float = 0.0
+        elif ~np.isfinite(denom_small_cut) or denom_small_cut < 0:
+            msg = 'denom_small_cut must be non-negative and finite'
+            raise ValueError(msg)
         else:
             denom_cut_loc = denom_small_cut * dm2
 
@@ -480,8 +489,12 @@ def cubic_call(xint: float | NDArray[np.floating], spline: SplineCoeffs, ext: in
 
 @numba.extending.overload(cubic_call)
 def _select_cubic_call(xint, spline, ext):  # noqa: ANN001, ANN202 # type: ignore[implicit-any-parameter]
-    assert isinstance(ext, numba.core.types.Integer)
-    assert isinstance(spline, numba.core.types.NamedTuple)
+    if not isinstance(ext, numba.core.types.Integer):
+        msg = 'Unsuported type of input: ' + str(type(ext))
+        raise TypeError(msg)
+    if not isinstance(spline, numba.core.types.NamedTuple):
+        msg = 'Unsuported type of input: ' + str(type(spline))
+        raise TypeError(msg)
     if isinstance(xint, numba.core.types.Float):
 
         def temp(xint, spline, ext):  # noqa: ANN001, ANN202 # type: ignore[reportRedeclaration]
@@ -566,7 +579,9 @@ class AkimaSpline:
         linear_vector_calls: int = 0,
     ) -> None:
         # record the inputs
-        assert linear_vector_calls in (0, 1)
+        if not linear_vector_calls in (0, 1):
+            msg = 'linear_vector_calls must be in (0, 1)'
+            raise ValueError(msg)
 
         self.ext: int = ext
         self.denom_small_cut: float = denom_small_cut
