@@ -10,6 +10,8 @@ import numpy as np
 import pytest
 from numba import njit
 
+import warnings
+
 from pyakima.pyakima import (
     AkimaSpline,
     SplineCoeffs,
@@ -778,10 +780,11 @@ def test_actual_multiplier_overflow_in_affine_spline_produces_ieee_nonfinite_coe
     h_exponent: int,
     slope_exponent: int,
 ) -> None:
-    x, y, _ = _power_of_two_affine_points(dtype, h_exponent=h_exponent, slope_exponent=slope_exponent)
+    with warnings.catch_warnings():
+        warnings.filterwarnings(action="ignore", message="overflow encountered in cast")
+        x, y, _ = _power_of_two_affine_points(dtype, h_exponent=h_exponent, slope_exponent=slope_exponent)
 
     spline = akima_create_helper(x, y)
-
     assert np.all(np.isfinite(spline.a))
     assert np.any(~np.isfinite(spline.b))
     assert np.any(~np.isfinite(spline.c))

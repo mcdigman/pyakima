@@ -53,7 +53,7 @@ class SplineCoeffs(NamedTuple):
     d: NDArray[np.floating]
 
 
-@njit()
+@njit(error_model="numpy")
 def akima_create_helper(
     x: NDArray[np.floating], y: NDArray[np.floating], corner_model: int = 0, denom_small_cut: float = 0.0
 ) -> SplineCoeffs:
