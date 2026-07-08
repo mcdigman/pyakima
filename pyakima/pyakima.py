@@ -88,7 +88,11 @@ def akima_create_helper(
     Raises
     ------
     ValueError
-        if corner_model is unrecognized.
+        if corner_model is unrecognized
+        if input sizes do not match
+        if x is not monotonically increasing
+    TypeError
+        if x and y are not the same dtype
 
     Notes
     -----
@@ -110,17 +114,17 @@ def akima_create_helper(
         msg2 = 'Input sizes must match'
         raise ValueError(msg2)
 
-    # calculate the difference
-    xdiffs = np.diff(x)
-    if not np.all(xdiffs > 0.0):
-        msg3 = 'x must be monotonically increasing'
-        raise ValueError(msg3)
-
     # get the input precision
     dtype = x.dtype
     if not y.dtype == dtype:  # noqa: SIM201
         msg = 'x and y of different input precision is unsupported'
         raise TypeError(msg)
+
+    # calculate the difference
+    xdiffs = np.diff(x)
+    if not np.all(xdiffs > 0.0):
+        msg3 = 'x must be monotonically increasing'
+        raise ValueError(msg3)
 
     # set boolean variables to control the loop behavior in each corner model case
     if corner_model == 0:
