@@ -303,12 +303,12 @@ def test_non_affine_basic_akima_coefficients_match_hand_computed_values(corner_m
     spline = akima_create_helper(x, y, corner_model=corner_model, denom_small_cut=0.0)
 
     np.testing.assert_array_equal(spline.a, y[:-1])
-    _assert_same_float_values(spline.b, np.array([1.0 / 2.0, 4.0 / 3.0, 5.0 / 2.0, 5.0, 61.0 / 7.0]), maxulp=32)
-    _assert_same_float_values(spline.c, np.array([2.0 / 3.0, 5.0 / 6.0, 2.0, 16.0 / 7.0, 18.0 / 7.0]), maxulp=32)
+    _assert_same_float_values(spline.b, np.array([1.0 / 2.0, 4.0 / 3.0, 5.0 / 2.0, 5.0, 61.0 / 7.0]), maxulp=18)
+    _assert_same_float_values(spline.c, np.array([2.0 / 3.0, 5.0 / 6.0, 2.0, 16.0 / 7.0, 18.0 / 7.0]), maxulp=18)
     _assert_same_float_values(
         spline.d,
         np.array([-1.0 / 6.0, -1.0 / 6.0, -1.0 / 2.0, -2.0 / 7.0, -2.0 / 7.0]),
-        maxulp=32,
+        maxulp=18,
     )
 
 
@@ -322,17 +322,17 @@ def test_non_affine_makima_coefficients_match_hand_computed_values() -> None:
     _assert_same_float_values(
         spline.b,
         np.array([3.0 / 8.0, 16.0 / 13.0, 27.0 / 11.0, 29.0 / 6.0, 25.0 / 3.0]),
-        maxulp=32,
+        maxulp=11,
     )
     _assert_same_float_values(
         spline.c,
         np.array([53.0 / 52.0, 155.0 / 143.0, 149.0 / 66.0, 3.0, 194.0 / 51.0]),
-        maxulp=32,
+        maxulp=11,
     )
     _assert_same_float_values(
         spline.d,
         np.array([-41.0 / 104.0, -45.0 / 143.0, -47.0 / 66.0, -5.0 / 6.0, -58.0 / 51.0]),
-        maxulp=32,
+        maxulp=11,
     )
 
 
