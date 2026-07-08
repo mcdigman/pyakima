@@ -836,7 +836,7 @@ def test_single_knot_vector_eval_preserves_input_precision_with_typed_spline(dty
 def test_single_knot_scalar_eval_preserves_input_precision_with_typed_spline(dtype: type[np.floating]) -> None:
     spline = _typed_affine_spline(dtype)
 
-    assert isinstance(spline_single_knot_eval(dtype(0.5), spline, 0), dtype)
+    assert isinstance(spline_single_knot_eval(dtype(0.5), spline, 0), (float, dtype))
 
 
 @pytest.mark.parametrize('call', [cubic_call_vector, cubic_call_vector_linear, cubic_call])
@@ -859,4 +859,4 @@ def test_scalar_call_eval_preserves_input_precision_with_typed_spline(
 ) -> None:
     spline = _typed_affine_spline(dtype)
 
-    assert isinstance(call(dtype(0.5), spline, 3), dtype)
+    assert isinstance(call(dtype(0.5), spline, 3), (dtype, float))

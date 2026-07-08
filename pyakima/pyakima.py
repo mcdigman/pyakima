@@ -119,7 +119,7 @@ def akima_create_helper(
     # get the input precision
     dtype = x.dtype
     if not y.dtype == dtype:
-        msg = 'x and y must be the same input precision'
+        msg = 'x and y of different input precision is unsupported'
         raise TypeError(msg)
 
     # set boolean variables to control the loop behavior in each corner model case
@@ -161,17 +161,17 @@ def akima_create_helper(
         # w1 and w2 are weights
         if modified:
             # modified akima weights
-            w1: float = np.abs(m[i + 3] - m[i + 2]) + np.abs(m[i + 3] + m[i + 2]) / 2.0
-            w2: float = np.abs(m[i + 1] - m[i]) + np.abs(m[i + 1] + m[i]) / 2.0
+            w1 = np.abs(m[i + 3] - m[i + 2]) + np.abs(m[i + 3] + m[i + 2]) / 2.0
+            w2 = np.abs(m[i + 1] - m[i]) + np.abs(m[i + 1] + m[i]) / 2.0
         else:
             # basic akima weights
             w1 = np.abs(m[i + 3] - m[i + 2])
             w2 = np.abs(m[i + 1] - m[i])
 
         # the denominator of the slope; if denom is zero and m[i+2]!=m[i+1], we have a corner
-        denom: float = w1 + w2
+        denom = w1 + w2
 
-        dm2: float = np.abs(m[i + 2] - m[i + 1])  # if denom is zero and m[i+2] == m[i+1], the spline is just flat
+        dm2 = np.abs(m[i + 2] - m[i + 1])  # if denom is zero and m[i+2] == m[i+1], the spline is just flat
 
         if np.isnan(denom) or ~np.isfinite(dm2):
             # handling for nans
@@ -187,7 +187,7 @@ def akima_create_helper(
 
         # calculate the denominator cutoff we need with appropriate dimension scaling
         if denom_small_cut == 0.0:
-            denom_cut_loc: float = 0.0
+            denom_cut_loc = 0.0
         elif ~np.isfinite(denom_small_cut) or denom_small_cut < 0:
             msg5 = 'denom_small_cut must be non-negative and finite'
             raise ValueError(msg5)
@@ -209,7 +209,7 @@ def akima_create_helper(
         # zero denominator should be trapped by previous checks,
         # but handle anyway in case an edge case slips by to prevent zero division errors
         if w2 == 0.0 or denom == 0.0:
-            alpha: float = 0.0
+            alpha = 0.0
         else:
             # derivative of slope with respect to m, used to interpolate the slope
             alpha = w2 / denom
@@ -230,7 +230,7 @@ def akima_create_helper(
         b[i] = t_right[i]
 
         # as written, h is the same as xdiff, but might not be in some possible modifications
-        h: float = x[i + 1] - x[i]
+        h = x[i + 1] - x[i]
 
         c[i] = (3 * m[i + 2] - 2 * t_right[i] - t_left[i + 1]) / h
         d[i] = (t_right[i] + t_left[i + 1] - 2 * m[i + 2]) / h**2
@@ -303,8 +303,8 @@ def cubic_call_scalar(xint: float, spline: SplineCoeffs, ext: int) -> float:
 
     # handle out of bounds
     if ext == 0:
-        y_bound_low: float = np.nan
-        y_bound_high: float = np.nan
+        y_bound_low = np.nan
+        y_bound_high = np.nan
     elif ext == 1:
         y_bound_low = 0.0
         y_bound_high = 0.0
@@ -375,8 +375,8 @@ def cubic_call_vector(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int
 
     # boundary value handling
     if ext == 0:
-        y_bound_low: float = np.nan
-        y_bound_high: float = np.nan
+        y_bound_low = np.nan
+        y_bound_high = np.nan
     elif ext == 1:
         y_bound_low = 0.0
         y_bound_high = 0.0
@@ -390,7 +390,8 @@ def cubic_call_vector(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int
         msg = f'Unrecognized option for extrapolation: {ext}'
         raise ValueError(msg)
 
-    res = np.zeros(xint.size)
+    dtype = xint.dtype
+    res = np.zeros(xint.size, dtype=dtype)
 
     # handle the initial value
     last_idx: int = int(np.searchsorted(spline.x[: n_control - 1], xint[0], side='right') - 1)
@@ -538,7 +539,8 @@ def cubic_call_vector_linear(xint: NDArray[np.floating], spline: SplineCoeffs, e
     NDArray[np.floating]
         array of the same size as xint containing interpolated y values.
     """
-    res = np.zeros(xint.size)
+    dtype = xint.dtype
+    res = np.zeros(xint.size, dtype=dtype)
     # iterate over every input point
     for j in range(xint.size):
         # let cubic_call_scalar handle finding the correct subspline and evaluating
