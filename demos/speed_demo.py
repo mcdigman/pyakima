@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from types import ModuleType
 
 CONTROL_POINT_LENGTHS = (5, 64, 4096)
+SCALAR_GRID_LENGTH = 257
 VECTOR_CALL_LENGTHS = (8, 10000, 100000)
 EXT = 1
 MIN_SECONDS = 0.01
@@ -121,8 +122,8 @@ def _eval_points(n_eval: int) -> np.ndarray:
     return np.linspace(0.0, 10.0, n_eval, dtype=np.float64)
 
 
-def _scalar_eval_point() -> float:
-    return 4.321
+def _scalar_eval_points() -> np.ndarray:
+    return np.linspace(0.0, 10.0, SCALAR_GRID_LENGTH, dtype=np.float64)
 
 
 def _pyakima_spline(
@@ -232,6 +233,25 @@ def _time_optional(callback: Callable[[], object]) -> Timing:
         return Timing(None, reason=f'{type(exc).__name__}: {exc}')
 
 
+def _time_scalar_grid_required(callback: Callable[[float], object], x_scalars: np.ndarray) -> Timing:
+    def call_grid() -> None:
+        for x_scalar in x_scalars:
+            callback(float(x_scalar))
+
+    timing = _time_required(call_grid)
+    if timing.seconds is None:
+        msg = 'required scalar-grid timing unexpectedly failed'
+        raise RuntimeError(msg)
+    return Timing(timing.seconds / x_scalars.size, timing.loops * x_scalars.size)
+
+
+def _time_scalar_grid_optional(callback: Callable[[float], object], x_scalars: np.ndarray) -> Timing:
+    try:
+        return _time_scalar_grid_required(callback, x_scalars)
+    except Exception as exc:  # noqa: BLE001 - optional backends should skip cleanly.
+        return Timing(None, reason=f'{type(exc).__name__}: {exc}')
+
+
 def _format_time(timing: Timing) -> str:
     if timing.seconds is None:
         return 'skip'
@@ -302,16 +322,25 @@ def _creation_rows() -> list[tuple[str, ...]]:
 
 def _scalar_rows() -> list[tuple[str, ...]]:
     rows: list[tuple[str, ...]] = []
-    x_scalar = _scalar_eval_point()
+    x_scalars = _scalar_eval_points()
     for model in MODELS:
         for n_control in CONTROL_POINT_LENGTHS:
             x, y = _control_points(n_control)
             py_spline = _pyakima_spline(x, y, model)
             coeffs = py_spline.spline
 
-            class_time = _time_required(lambda py_spline=py_spline: py_spline(x_scalar))
-            dispatch_time = _time_required(lambda coeffs=coeffs: cubic_call(x_scalar, coeffs, EXT))
-            scalar_time = _time_required(lambda coeffs=coeffs: cubic_call_scalar(x_scalar, coeffs, EXT))
+            class_time = _time_scalar_grid_required(
+                lambda x_scalar, py_spline=py_spline: py_spline(x_scalar),
+                x_scalars,
+            )
+            dispatch_time = _time_scalar_grid_required(
+                lambda x_scalar, coeffs=coeffs: cubic_call(x_scalar, coeffs, EXT),
+                x_scalars,
+            )
+            scalar_time = _time_scalar_grid_required(
+                lambda x_scalar, coeffs=coeffs: cubic_call_scalar(x_scalar, coeffs, EXT),
+                x_scalars,
+            )
 
             try:
                 alternate_name, alternate = _alternate_spline(model, x, y)
@@ -319,12 +348,13 @@ def _scalar_rows() -> list[tuple[str, ...]]:
                 alternate_name = model.alternate
                 alternate_time = Timing(None, reason=f'{type(exc).__name__}: {exc}')
             else:
-                alternate_time = _time_optional(
-                    lambda alternate=alternate, model=model: _call_alternate(
+                alternate_time = _time_scalar_grid_optional(
+                    lambda x_scalar, alternate=alternate, model=model: _call_alternate(
                         alternate,
                         model,
                         x_scalar,
-                    )
+                    ),
+                    x_scalars,
                 )
 
             rows.append(
@@ -437,7 +467,7 @@ def main() -> None:
         _creation_rows(),
     )
     _print_table(
-        'Scalar call time per call',
+        f'Scalar call time per scalar ({SCALAR_GRID_LENGTH}-point grid average)',
         (
             'model',
             'n_ctrl',
