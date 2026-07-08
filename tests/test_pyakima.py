@@ -393,6 +393,150 @@ def test_corner_branch_coefficients_match_sharp_and_rounded_models(
     _assert_same_float_values(spline.d, expected_d)
 
 
+def test_heaviside_step_default_corner_models_agree_on_monotone_transition() -> None:
+    x = np.arange(7, dtype=np.float64)
+    y = np.array([0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0])
+    midpoints = x[:-1] + 0.5
+
+    nonrounded = AkimaSpline(x, y, ext=0, corner_model=0)
+    akima = AkimaSpline(x, y, ext=0, corner_model=1)
+    makima = AkimaSpline(x, y, ext=0, corner_model=2)
+
+    _assert_same_float_values(nonrounded.spline.b, np.zeros(6))
+    _assert_same_float_values(nonrounded.spline.c, np.array([0.0, 0.0, 3.0, 0.0, 0.0, 0.0]))
+    _assert_same_float_values(nonrounded.spline.d, np.array([0.0, 0.0, -2.0, 0.0, 0.0, 0.0]))
+    _assert_same_float_values(nonrounded(midpoints), np.array([0.0, 0.0, 0.5, 1.0, 1.0, 1.0]))
+    _assert_coefficients_equal(akima.spline, nonrounded.spline)
+    _assert_coefficients_equal(makima.spline, nonrounded.spline)
+
+
+def test_heaviside_step_corner_cut_distinguishes_sharp_and_rounded_models() -> None:
+    x = np.arange(7, dtype=np.float64)
+    y = np.array([0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0])
+    midpoints = x[:-1] + 0.5
+
+    sharp = AkimaSpline(x, y, ext=0, corner_model=0, denom_small_cut=2.0)
+    rounded = AkimaSpline(x, y, ext=0, corner_model=1, denom_small_cut=2.0)
+    makima = AkimaSpline(x, y, ext=0, corner_model=2, denom_small_cut=2.0)
+
+    _assert_same_float_values(sharp.spline.b, np.array([0.0, 0.0, 1.0, 0.0, 0.0, 0.0]))
+    _assert_same_float_values(sharp.spline.c, np.zeros(6))
+    _assert_same_float_values(sharp.spline.d, np.zeros(6))
+    _assert_same_float_values(sharp(midpoints), np.array([0.0, 0.0, 0.5, 1.0, 1.0, 1.0]))
+
+    expected_rounded_b = np.array([0.0, 0.0, 0.5, 0.5, 0.0, 0.0])
+    expected_rounded_c = np.array([0.0, -0.5, 1.5, -1.0, 0.0, 0.0])
+    expected_rounded_d = np.array([0.0, 0.5, -1.0, 0.5, 0.0, 0.0])
+    expected_rounded_midpoints = np.array([0.0, -1.0 / 16.0, 0.5, 17.0 / 16.0, 1.0, 1.0])
+
+    _assert_same_float_values(rounded.spline.b, expected_rounded_b)
+    _assert_same_float_values(rounded.spline.c, expected_rounded_c)
+    _assert_same_float_values(rounded.spline.d, expected_rounded_d)
+    _assert_same_float_values(rounded(midpoints), expected_rounded_midpoints)
+    _assert_coefficients_equal(makima.spline, rounded.spline)
+    _assert_same_float_values(makima(midpoints), expected_rounded_midpoints)
+
+
+def test_abs_like_slope_sign_change_distinguishes_all_corner_models() -> None:
+    x = np.arange(-3.0, 4.0, dtype=np.float64)
+    y = np.where(x < 0.0, -2.0 * x, x)
+    near_corner = np.array([-0.5, 0.5])
+
+    sharp = AkimaSpline(x, y, ext=0, corner_model=0, denom_small_cut=0.0)
+    rounded = AkimaSpline(x, y, ext=0, corner_model=1, denom_small_cut=0.0)
+    makima = AkimaSpline(x, y, ext=0, corner_model=2, denom_small_cut=0.0)
+
+    _assert_same_float_values(sharp.spline.b, np.array([-2.0, -2.0, -2.0, 1.0, 1.0, 1.0]))
+    _assert_same_float_values(sharp.spline.c, np.zeros(6))
+    _assert_same_float_values(sharp.spline.d, np.zeros(6))
+    _assert_same_float_values(sharp(near_corner), np.array([1.0, 0.5]))
+
+    _assert_same_float_values(rounded.spline.b, np.array([-2.0, -2.0, -2.0, -0.5, 1.0, 1.0]))
+    _assert_same_float_values(rounded.spline.c, np.array([0.0, 0.0, -1.5, 3.0, 0.0, 0.0]))
+    _assert_same_float_values(rounded.spline.d, np.array([0.0, 0.0, 1.5, -1.5, 0.0, 0.0]))
+    _assert_same_float_values(rounded(near_corner), np.array([13.0 / 16.0, 5.0 / 16.0]))
+
+    _assert_same_float_values(makima.spline.b, np.array([-2.0, -2.0, -2.0, 0.0, 1.0, 1.0]))
+    _assert_same_float_values(makima.spline.c, np.array([0.0, 0.0, -2.0, 2.0, 0.0, 0.0]))
+    _assert_same_float_values(makima.spline.d, np.array([0.0, 0.0, 2.0, -1.0, 0.0, 0.0]))
+    _assert_same_float_values(makima(near_corner), np.array([3.0 / 4.0, 3.0 / 8.0]))
+
+    left_interval = 2
+    right_interval = 3
+    corner_x = 0.0
+    _assert_same_float_values(
+        np.array(
+            [
+                _single_knot_derivative(corner_x, sharp.spline, left_interval),
+                sharp.spline.b[right_interval],
+            ]
+        ),
+        np.array([-2.0, 1.0]),
+    )
+    _assert_same_float_values(
+        np.array(
+            [
+                _single_knot_derivative(corner_x, rounded.spline, left_interval),
+                rounded.spline.b[right_interval],
+            ]
+        ),
+        np.array([-0.5, -0.5]),
+    )
+    _assert_same_float_values(
+        np.array(
+            [
+                _single_knot_derivative(corner_x, makima.spline, left_interval),
+                makima.spline.b[right_interval],
+            ]
+        ),
+        np.array([0.0, 0.0]),
+    )
+
+
+def test_dirac_delta_sample_default_corner_models_agree_on_symmetric_pulse() -> None:
+    x = np.arange(7, dtype=np.float64)
+    y = np.array([0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0])
+    midpoints = x[:-1] + 0.5
+
+    nonrounded = AkimaSpline(x, y, ext=0, corner_model=0)
+    akima = AkimaSpline(x, y, ext=0, corner_model=1)
+    makima = AkimaSpline(x, y, ext=0, corner_model=2)
+
+    _assert_same_float_values(nonrounded.spline.b, np.zeros(6))
+    _assert_same_float_values(nonrounded.spline.c, np.array([0.0, 0.0, 3.0, -3.0, 0.0, 0.0]))
+    _assert_same_float_values(nonrounded.spline.d, np.array([0.0, 0.0, -2.0, 2.0, 0.0, 0.0]))
+    _assert_same_float_values(nonrounded(midpoints), np.array([0.0, 0.0, 0.5, 0.5, 0.0, 0.0]))
+    _assert_coefficients_equal(akima.spline, nonrounded.spline)
+    _assert_coefficients_equal(makima.spline, nonrounded.spline)
+
+
+def test_dirac_delta_sample_corner_cut_distinguishes_sharp_and_rounded_models() -> None:
+    x = np.arange(7, dtype=np.float64)
+    y = np.array([0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0])
+    midpoints = x[:-1] + 0.5
+
+    sharp = AkimaSpline(x, y, ext=0, corner_model=0, denom_small_cut=2.0)
+    rounded = AkimaSpline(x, y, ext=0, corner_model=1, denom_small_cut=2.0)
+    makima = AkimaSpline(x, y, ext=0, corner_model=2, denom_small_cut=2.0)
+
+    _assert_same_float_values(sharp.spline.b, np.array([0.0, 0.0, 1.0, -1.0, 0.0, 0.0]))
+    _assert_same_float_values(sharp.spline.c, np.zeros(6))
+    _assert_same_float_values(sharp.spline.d, np.zeros(6))
+    _assert_same_float_values(sharp(midpoints), np.array([0.0, 0.0, 0.5, 0.5, 0.0, 0.0]))
+
+    expected_rounded_b = np.array([0.0, 0.0, 0.5, 0.0, -0.5, 0.0])
+    expected_rounded_c = np.array([0.0, -0.5, 2.0, -2.5, 1.0, 0.0])
+    expected_rounded_d = np.array([0.0, 0.5, -1.5, 1.5, -0.5, 0.0])
+    expected_rounded_midpoints = np.array([0.0, -1.0 / 16.0, 9.0 / 16.0, 9.0 / 16.0, -1.0 / 16.0, 0.0])
+
+    _assert_same_float_values(rounded.spline.b, expected_rounded_b)
+    _assert_same_float_values(rounded.spline.c, expected_rounded_c)
+    _assert_same_float_values(rounded.spline.d, expected_rounded_d)
+    _assert_same_float_values(rounded(midpoints), expected_rounded_midpoints)
+    _assert_coefficients_equal(makima.spline, rounded.spline)
+    _assert_same_float_values(makima(midpoints), expected_rounded_midpoints)
+
+
 def test_reachable_zero_left_weight_path_matches_hand_computed_coefficients() -> None:
     x = np.arange(6, dtype=np.float64)
     y = np.array([0.0, 1.0, 2.0, 5.0, 10.0, 17.0])
