@@ -53,7 +53,7 @@ class SplineCoeffs(NamedTuple):
     d: NDArray[np.floating]
 
 
-@njit(error_model="numpy")
+@njit(error_model='numpy')
 def akima_create_helper(
     x: NDArray[np.floating], y: NDArray[np.floating], corner_model: int = 0, denom_small_cut: float = 0.0
 ) -> SplineCoeffs:
@@ -118,7 +118,7 @@ def akima_create_helper(
 
     # get the input precision
     dtype = x.dtype
-    if not y.dtype == dtype:
+    if not y.dtype == dtype:  # noqa: SIM201
         msg = 'x and y of different input precision is unsupported'
         raise TypeError(msg)
 
@@ -154,7 +154,9 @@ def akima_create_helper(
     m[n_control + 2] = 3 * m[n_control] - 2 * m[n_control - 1]
 
     t_left = np.zeros(n_control, dtype=dtype)  # left sided slopes
-    t_right = np.zeros(n_control, dtype=dtype)  # right side slopes (differ from t_left only for non-rounded corner handling)
+    t_right = np.zeros(
+        n_control, dtype=dtype
+    )  # right side slopes (differ from t_left only for non-rounded corner handling)
 
     # loop through the control points
     for i in range(n_control):
@@ -239,12 +241,12 @@ def akima_create_helper(
 
 
 @overload
-def spline_single_knot_eval(xint: float, spline: SplineCoeffs, i: int) -> float: ...
+def spline_single_knot_eval(xint: float | np.floating, spline: SplineCoeffs, i: int) -> float: ...
 @overload
 def spline_single_knot_eval(xint: NDArray[np.floating], spline: SplineCoeffs, i: int) -> NDArray[np.floating]: ...
 @njit()
 def spline_single_knot_eval(
-    xint: float | NDArray[np.floating], spline: SplineCoeffs, i: int
+    xint: float | np.floating | NDArray[np.floating], spline: SplineCoeffs, i: int
 ) -> float | NDArray[np.floating]:
     """
     Evaluate the spline from the values at the knot point with index i.
@@ -253,7 +255,7 @@ def spline_single_knot_eval(
 
     Parameters
     ----------
-    xint : float | NDArray[np.floating]
+    xint : float | np.floating | NDArray[np.floating]
         scalar or array of x values at which to evaluate the spline.
     spline : SplineCoeffs
         object representing the spline to evaluate.
@@ -263,7 +265,7 @@ def spline_single_knot_eval(
     Returns
     -------
     float | NDArray[np.floating]
-        evaluated points of the same shape as xint.
+        evaluated points of the same shape as xint; preserves input type for array inputs but scalars are cast to float
     """
     return (
         spline.a[i]

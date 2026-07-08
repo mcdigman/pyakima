@@ -4,13 +4,12 @@
 
 from __future__ import annotations
 
+import warnings
 from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
 from numba import njit
-
-import warnings
 
 from pyakima.pyakima import (
     AkimaSpline,
@@ -522,7 +521,7 @@ def test_cubic_call_rejects_non_float_scalar_and_non_array_inputs() -> None:
         cubic_call(1, spline.spline, 3)  # type: ignore[arg-type]
 
     with pytest.raises(TypeError):
-        cubic_call([0.5, 1.5], spline.spline, 3)  # type: ignore[arg-type]
+        cubic_call([0.5, 1.5], spline.spline, 3)  # type: ignore[arg-type, call-overload]
 
     with pytest.raises(TypeError):
         spline(1)
@@ -534,7 +533,7 @@ def test_numba_overload_rejects_non_integer_ext_type() -> None:
 
     @njit()
     def call_with_float_ext(xint: float, spline_coeffs: SplineCoeffs) -> float:
-        return cubic_call(xint, spline_coeffs, 3.0)  # type: ignore[arg-type]
+        return cubic_call(xint, spline_coeffs, 3.0)  # type: ignore[arg-type, call-overload]
 
     with pytest.raises(TypeError, match='Unsuported type of input'):
         call_with_float_ext(0.5, spline.spline)
@@ -543,7 +542,7 @@ def test_numba_overload_rejects_non_integer_ext_type() -> None:
 def test_numba_overload_rejects_non_spline_type() -> None:
     @njit()
     def call_with_float_spline(xint: float) -> float:
-        return cubic_call(xint, 1.0, 3)  # type: ignore[arg-type]
+        return cubic_call(xint, 1.0, 3)  # type: ignore[arg-type, call-overload]
 
     with pytest.raises(TypeError, match='Unsuported type of input'):
         call_with_float_spline(0.5)
@@ -606,8 +605,8 @@ def test_integer_control_arrays_are_accepted_without_integer_output_dtype_guaran
     y = 2 * x + 1
     xint = np.array([0.0, 0.5, 2.5, 4.0])
 
-    helper_spline = akima_create_helper(x, y)
-    object_spline = AkimaSpline(x, y, ext=0)
+    helper_spline = akima_create_helper(x, y)  # type: ignore[bad-argument-type, arg-type]
+    object_spline = AkimaSpline(x, y, ext=0)  # type: ignore[bad-argument-type, arg-type]
 
     np.testing.assert_array_equal(helper_spline.b, np.full(x.size - 1, 2.0))
     np.testing.assert_array_equal(helper_spline.c, np.zeros(x.size - 1))
@@ -781,7 +780,7 @@ def test_actual_multiplier_overflow_in_affine_spline_produces_ieee_nonfinite_coe
     slope_exponent: int,
 ) -> None:
     with warnings.catch_warnings():
-        warnings.filterwarnings(action="ignore", message="overflow encountered in cast")
+        warnings.filterwarnings(action='ignore', message='overflow encountered in cast')
         x, y, _ = _power_of_two_affine_points(dtype, h_exponent=h_exponent, slope_exponent=slope_exponent)
 
     spline = akima_create_helper(x, y)
