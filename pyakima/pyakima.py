@@ -116,9 +116,6 @@ def akima_create_helper(
 
     # get the input precision
     dtype = x.dtype
-    if not y.dtype == dtype:  # noqa: SIM201
-        msg = 'x and y of different input precision is unsupported'
-        raise TypeError(msg)
 
 
     # the numerically computed local slopes
@@ -133,7 +130,12 @@ def akima_create_helper(
         diff_y = y[itrx + 1] - y[itrx]
         m[2 + itrx] = diff_y / diff_x
 
-    #if not np.all(xdiffs > 0.0):
+
+    # natural boundary conditions
+    m[0] = 3 * m[2] - 2 * m[3]
+    m[1] = 2 * m[2] - m[3]
+    m[n_control + 1] = 2 * m[n_control] - m[n_control - 1]
+    m[n_control + 2] = 3 * m[n_control] - 2 * m[n_control - 1]
 
     # set boolean variables to control the loop behavior in each corner model case
     if corner_model == 0:
@@ -156,11 +158,6 @@ def akima_create_helper(
         raise ValueError(msg4)
 
 
-    # natural boundary conditions
-    m[0] = 3 * m[2] - 2 * m[3]
-    m[1] = 2 * m[2] - m[3]
-    m[n_control + 1] = 2 * m[n_control] - m[n_control - 1]
-    m[n_control + 2] = 3 * m[n_control] - 2 * m[n_control - 1]
 
     t_left = np.zeros(n_control, dtype=dtype)  # left sided slopes
     t_right = np.zeros(
