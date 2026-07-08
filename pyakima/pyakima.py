@@ -423,17 +423,21 @@ def cubic_call_vector(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int
             continue
 
         if j == 0 or x_loc > xint[j - 1]:
-            if x_loc < spline.x[last_idx + 1]:
-                i = last_idx
-            else:
-                i = np.searchsorted(spline.x[last_idx : n_control - 1], x_loc, side='right') - 1 + last_idx
-            last_idx = i
+            i = n_control - 2
+            for i_test in range(last_idx, n_control-1):
+                if x_loc < spline.x[i_test + 1]:
+                    i = i_test
+                    break
         elif x_loc >= spline.x[last_idx]:
             i = last_idx
         elif x_loc <= spline.x[0]:
             i = 0
         else:
-            i = np.searchsorted(spline.x[:last_idx], x_loc, side='right') - 1
+            i = 0
+            for i_test in range(last_idx-1, 0, -1):
+                if x_loc >= spline.x[i_test]:
+                    i = i_test
+                    break
 
         last_idx = i
 
