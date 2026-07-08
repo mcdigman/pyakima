@@ -583,7 +583,7 @@ class AkimaSpline:
 
         # default values for the denominator cutoff depend on the method
         if np.isnan(self.denom_small_cut):
-            if corner_model == 0:
+            if self.corner_model == 0:
                 # match gsl
                 self.denom_small_cut = 0.0
             elif self.corner_model == 2:
