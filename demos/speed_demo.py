@@ -38,7 +38,7 @@ SCALAR_GRID_LENGTH = 257
 VECTOR_CALL_LENGTHS = (8, 1000, 10000, 100000)
 EXT = 0
 MIN_SECONDS = 0.01
-REPEATS = 3
+REPEATS = 5
 
 
 @dataclass(frozen=True)
@@ -80,6 +80,7 @@ class DemoOptions:
     """Command-line options for the timing demo."""
 
     show_overhead: bool
+    show_all_call_models: bool
 
 
 MODELS = (
@@ -104,6 +105,14 @@ MODELS = (
         scipy_method='makima',
     ),
 )
+DEFAULT_CALL_MODEL = ModelCase(
+    label='scipy-style',
+    corner_model=2,
+    denom_small_cut=0.0,
+    alternate='scipy-style',
+    scipy_method='makima',
+)
+DEFAULT_CALL_MODELS = (MODELS[0], DEFAULT_CALL_MODEL)
 
 
 def _installed_version(package_name: str) -> str | None:
@@ -140,8 +149,13 @@ def _parse_args() -> DemoOptions:
         action='store_true',
         help='include Python dispatch/class evaluation columns; constructor overhead is always shown',
     )
+    parser.add_argument(
+        '--show-all-call-models',
+        action='store_true',
+        help='include every call-model row; by default scalar/vector calls use gsl-style and scipy-style rows',
+    )
     args = parser.parse_args()
-    return DemoOptions(show_overhead=args.show_overhead)
+    return DemoOptions(show_overhead=args.show_overhead, show_all_call_models=args.show_all_call_models)
 
 
 def _control_points(n_control: int) -> tuple[np.ndarray, np.ndarray]:
@@ -339,6 +353,12 @@ def _print_runtime_versions() -> None:
     print(f'python {sys.version.split()[0]} | numba {numba.__version__} | numpy {np.__version__}')
 
 
+def _call_models(options: DemoOptions) -> tuple[ModelCase, ...]:
+    if options.show_all_call_models:
+        return MODELS
+    return DEFAULT_CALL_MODELS
+
+
 def _creation_rows() -> list[tuple[str, ...]]:
     rows: list[tuple[str, ...]] = []
     for model in MODELS:
@@ -347,7 +367,6 @@ def _creation_rows() -> list[tuple[str, ...]]:
             class_time = _time_required(lambda x=x, y=y, model=model: _pyakima_spline(x, y, model))
             helper_time = _time_required(lambda x=x, y=y, model=model: _pyakima_helper(x, y, model))
 
-            alternate_name = model.alternate
             alternate_time = _time_optional(lambda model=model, x=x, y=y: _alternate_spline(model, x, y)[1])
             rows.append(
                 (
@@ -355,7 +374,6 @@ def _creation_rows() -> list[tuple[str, ...]]:
                     str(n_control),
                     _format_time(class_time),
                     _format_time(helper_time),
-                    alternate_name,
                     _format_time(alternate_time),
                     _format_speedup((class_time, helper_time), alternate_time),
                 )
@@ -366,7 +384,7 @@ def _creation_rows() -> list[tuple[str, ...]]:
 def _scalar_rows(options: DemoOptions) -> list[tuple[str, ...]]:
     rows: list[tuple[str, ...]] = []
     x_scalars = _scalar_eval_points()
-    for model in MODELS:
+    for model in _call_models(options):
         for n_control in CONTROL_POINT_LENGTHS:
             x, y = _control_points(n_control)
             py_spline = _pyakima_spline(x, y, model)
@@ -391,9 +409,8 @@ def _scalar_rows(options: DemoOptions) -> list[tuple[str, ...]]:
                 overhead_cells = (_format_time(class_time), _format_time(dispatch_time))
 
             try:
-                alternate_name, alternate = _alternate_spline(model, x, y)
+                _, alternate = _alternate_spline(model, x, y)
             except Exception as exc:  # noqa: BLE001 - optional backends should skip cleanly.
-                alternate_name = model.alternate
                 alternate_time = Timing(None, reason=f'{type(exc).__name__}: {exc}')
             else:
                 alternate_time = _time_scalar_grid_optional(
@@ -411,7 +428,6 @@ def _scalar_rows(options: DemoOptions) -> list[tuple[str, ...]]:
                     str(n_control),
                     *overhead_cells,
                     _format_time(scalar_time),
-                    alternate_name,
                     _format_time(alternate_time),
                     _format_speedup(pyakima_timings, alternate_time),
                 )
@@ -421,7 +437,7 @@ def _scalar_rows(options: DemoOptions) -> list[tuple[str, ...]]:
 
 def _vector_rows(options: DemoOptions) -> list[tuple[str, ...]]:
     rows: list[tuple[str, ...]] = []
-    for model in MODELS:
+    for model in _call_models(options):
         for n_control in CONTROL_POINT_LENGTHS:
             x, y = _control_points(n_control)
             py_spline = _pyakima_spline(x, y, model)
@@ -466,9 +482,8 @@ def _vector_rows(options: DemoOptions) -> list[tuple[str, ...]]:
                     )
 
                 try:
-                    alternate_name, alternate = _alternate_spline(model, x, y)
+                    _, alternate = _alternate_spline(model, x, y)
                 except Exception as exc:  # noqa: BLE001 - optional backends should skip cleanly.
-                    alternate_name = model.alternate
                     alternate_time = Timing(None, reason=f'{type(exc).__name__}: {exc}')
                 else:
                     alternate_time = _time_optional(
@@ -485,7 +500,6 @@ def _vector_rows(options: DemoOptions) -> list[tuple[str, ...]]:
                         *overhead_cells,
                         _format_time(vector_time),
                         _format_time(vector_linear_time),
-                        alternate_name,
                         _format_time(alternate_time),
                         _format_speedup(pyakima_timings, alternate_time),
                     )
@@ -505,6 +519,11 @@ def main() -> None:
     print('all pyakima jitted call paths are warmed once with matching arguments')
     if not options.show_overhead:
         print('evaluation tables hide Python dispatch/class overhead; pass --show-overhead to include it')
+    if not options.show_all_call_models:
+        print(
+            'evaluation tables use gsl-style and makima-backed scipy-style rows; '
+            'pass --show-all-call-models for all models'
+        )
 
     _print_availability()
     _print_table(
@@ -514,9 +533,8 @@ def main() -> None:
             'n_ctrl',
             'class',
             'helper',
-            'alt',
             'alt time',
-            'best py speedup',
+            'py speedup',
         ),
         _creation_rows(),
     )
@@ -527,9 +545,8 @@ def main() -> None:
             'n_ctrl',
             *scalar_overhead_columns,
             'scalar fn',
-            'alt',
             'alt time',
-            'best py speedup',
+            'py speedup',
         ),
         _scalar_rows(options),
     )
@@ -542,9 +559,8 @@ def main() -> None:
             *vector_overhead_columns,
             'vector fn',
             'linear fn',
-            'alt',
             'alt time',
-            'best py speedup',
+            'py speedup',
         ),
         _vector_rows(options),
     )
