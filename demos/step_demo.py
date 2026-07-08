@@ -13,29 +13,28 @@ from scipy.interpolate import Akima1DInterpolator
 from pyakima import AkimaSpline
 
 if __name__ == '__main__':
-
     # evaluation points
-    xs = np.linspace(1., 7., num=1401)
+    xs = np.linspace(1.0, 7.0, num=1401)
     ys_expect = 2 * np.heaviside(xs - 4, 0.5) - 1
 
     # control points
-    x = np.array([1., 2., 3., 4., 5., 6., 7.], dtype=np.float64)
+    x = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0], dtype=np.float64)
     y = 2 * np.heaviside(x - 4, 0.5) - 1
 
-    akima_gsl = AkimaSpline(x, y, corner_model=0, denom_small_cut=0.)
+    akima_gsl = AkimaSpline(x, y, corner_model=0, denom_small_cut=0.0)
     y_akima_gsl = akima_gsl(xs)
 
-    akima_scipy1 = AkimaSpline(x, y, corner_model=1, denom_small_cut=1.e-9)
+    akima_scipy1 = AkimaSpline(x, y, corner_model=1, denom_small_cut=1.0e-9)
     y_akima_scipy1 = akima_scipy1(xs)
 
     y_akima_scipy1_actual = Akima1DInterpolator(x, y, extrapolate=False, method='akima')(xs)
-    assert_allclose(y_akima_scipy1, y_akima_scipy1_actual, atol=1.e-14, rtol=1.e-14)
+    assert_allclose(y_akima_scipy1, y_akima_scipy1_actual, atol=1.0e-14, rtol=1.0e-14)
 
-    akima_scipy2 = AkimaSpline(x, y, corner_model=2, denom_small_cut=0.)
+    akima_scipy2 = AkimaSpline(x, y, corner_model=2, denom_small_cut=0.0)
     y_akima_scipy2 = akima_scipy2(xs)
 
     y_akima_scipy2_actual = Akima1DInterpolator(x, y, extrapolate=False, method='makima')(xs)
-    assert_allclose(y_akima_scipy2, y_akima_scipy2_actual, atol=1.e-14, rtol=1.e-14)
+    assert_allclose(y_akima_scipy2, y_akima_scipy2_actual, atol=1.0e-14, rtol=1.0e-14)
 
     fig, ax = plt.subplots()
     ax.plot(x, y, 'o', label='data')

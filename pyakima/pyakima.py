@@ -8,6 +8,7 @@ SplineCoeffs: namedtuple storing a spline
 AkimaSpline: python object managing creating and evaluating an akima spline
 
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, NamedTuple, overload
@@ -53,7 +54,9 @@ class SplineCoeffs(NamedTuple):
 
 
 @njit()
-def akima_create_helper(x: NDArray[np.floating], y: NDArray[np.floating], corner_model: int = 0, denom_small_cut: float = 0.) -> SplineCoeffs:
+def akima_create_helper(
+    x: NDArray[np.floating], y: NDArray[np.floating], corner_model: int = 0, denom_small_cut: float = 0.0
+) -> SplineCoeffs:
     """
     Precompute the coefficients necessary to handle akima splines.
 
@@ -120,7 +123,7 @@ def akima_create_helper(x: NDArray[np.floating], y: NDArray[np.floating], corner
 
     # calculate the difference
     xdiffs: NDArray[np.floating] = np.diff(x)
-    assert np.all(xdiffs > 0.)
+    assert np.all(xdiffs > 0.0)
 
     # set boolean variables to control the loop behavior in each corner model case
     if corner_model == 0:
@@ -145,7 +148,7 @@ def akima_create_helper(x: NDArray[np.floating], y: NDArray[np.floating], corner
     # the numerically computed local slopes
     m = np.zeros(n_control + 3)
 
-    m[2:n_control + 1] = np.diff(y) / xdiffs  # local slopes
+    m[2 : n_control + 1] = np.diff(y) / xdiffs  # local slopes
 
     # natural boundary conditions
     m[0] = 3 * m[2] - 2 * m[3]
@@ -153,7 +156,7 @@ def akima_create_helper(x: NDArray[np.floating], y: NDArray[np.floating], corner
     m[n_control + 1] = 2 * m[n_control] - m[n_control - 1]
     m[n_control + 2] = 3 * m[n_control] - 2 * m[n_control - 1]
 
-    t_left = np.zeros(n_control)   # left sided slopes
+    t_left = np.zeros(n_control)  # left sided slopes
     t_right = np.zeros(n_control)  # right side slopes (differ from t_left only for non-rounded corner handling)
 
     # loop through the control points
@@ -161,8 +164,8 @@ def akima_create_helper(x: NDArray[np.floating], y: NDArray[np.floating], corner
         # w1 and w2 are weights
         if modified:
             # modified akima weights
-            w1: float = np.abs(m[i + 3] - m[i + 2]) + np.abs(m[i + 3] + m[i + 2]) / 2.
-            w2: float = np.abs(m[i + 1] - m[i]) + np.abs(m[i + 1] + m[i]) / 2.
+            w1: float = np.abs(m[i + 3] - m[i + 2]) + np.abs(m[i + 3] + m[i + 2]) / 2.0
+            w2: float = np.abs(m[i + 1] - m[i]) + np.abs(m[i + 1] + m[i]) / 2.0
         else:
             # basic akima weights
             w1 = np.abs(m[i + 3] - m[i + 2])
@@ -179,15 +182,15 @@ def akima_create_helper(x: NDArray[np.floating], y: NDArray[np.floating], corner
             t_right[i] = np.nan
             continue
 
-        if dm2 == 0.:
+        if dm2 == 0.0:
             # handle flat case
             t_left[i] = m[i + 1]
             t_right[i] = t_left[i]
             continue
 
         # calculate the denominator cutoff we need with appropriate dimension scaling
-        if denom_small_cut == 0.:
-            denom_cut_loc: float = 0.
+        if denom_small_cut == 0.0:
+            denom_cut_loc: float = 0.0
         else:
             denom_cut_loc = denom_small_cut * dm2
 
@@ -199,14 +202,14 @@ def akima_create_helper(x: NDArray[np.floating], y: NDArray[np.floating], corner
             else:
                 # scipy method=akima like handling
                 # note for modified case, should really only get here if there is effectively no slope
-                t_left[i] = (m[i + 1] + m[i + 2]) / 2.
+                t_left[i] = (m[i + 1] + m[i + 2]) / 2.0
                 t_right[i] = t_left[i]
             continue
 
         # zero denominator should be trapped by previous checks,
         # but handle anyway in case an edge case slips by to prevent zero division errors
-        if w2 == 0. or denom == 0.:
-            alpha: float = 0.
+        if w2 == 0.0 or denom == 0.0:
+            alpha: float = 0.0
         else:
             # derivative of slope with respect to m, used to interpolate the slope
             alpha = w2 / denom
@@ -240,7 +243,9 @@ def spline_single_knot_eval(xint: float, spline: SplineCoeffs, i: int) -> float:
 @overload
 def spline_single_knot_eval(xint: NDArray[np.floating], spline: SplineCoeffs, i: int) -> NDArray[np.floating]: ...
 @njit()
-def spline_single_knot_eval(xint: float | NDArray[np.floating], spline: SplineCoeffs, i: int) -> float | NDArray[np.floating]:
+def spline_single_knot_eval(
+    xint: float | NDArray[np.floating], spline: SplineCoeffs, i: int
+) -> float | NDArray[np.floating]:
     """
     Evaluate the spline from the values at the knot point with index i.
 
@@ -263,8 +268,8 @@ def spline_single_knot_eval(xint: float | NDArray[np.floating], spline: SplineCo
     return (
         spline.a[i]
         + spline.b[i] * (xint - spline.x[i])
-        + spline.c[i] * (xint - spline.x[i])**2
-        + spline.d[i] * (xint - spline.x[i])**3
+        + spline.c[i] * (xint - spline.x[i]) ** 2
+        + spline.d[i] * (xint - spline.x[i]) ** 3
     )
 
 
@@ -301,8 +306,8 @@ def cubic_call_scalar(xint: float, spline: SplineCoeffs, ext: int) -> float:
         y_bound_low: float = np.nan
         y_bound_high: float = np.nan
     elif ext == 1:
-        y_bound_low = 0.
-        y_bound_high = 0.
+        y_bound_low = 0.0
+        y_bound_high = 0.0
     elif ext == 3:
         y_bound_low = float(spline.y[0])
         y_bound_high = float(spline.y[-1])
@@ -373,8 +378,8 @@ def cubic_call_vector(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int
         y_bound_low: float = np.nan
         y_bound_high: float = np.nan
     elif ext == 1:
-        y_bound_low = 0.
-        y_bound_high = 0.
+        y_bound_low = 0.0
+        y_bound_high = 0.0
     elif ext == 3:
         y_bound_low = float(spline.y[0])
         y_bound_high = float(spline.y[-1])
@@ -388,7 +393,7 @@ def cubic_call_vector(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int
     res = np.zeros(xint.size)
 
     # handle the initial value
-    last_idx: int = int(np.searchsorted(spline.x[:n_control - 1], float(xint[0]), side='right') - 1)
+    last_idx: int = int(np.searchsorted(spline.x[: n_control - 1], float(xint[0]), side='right') - 1)
     if last_idx > n_control - 2:
         last_idx = n_control - 2
     elif last_idx < 0:
@@ -421,7 +426,7 @@ def cubic_call_vector(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int
             if x_loc < spline.x[last_idx + 1]:
                 i = last_idx
             else:
-                i = int(np.searchsorted(spline.x[last_idx:n_control - 1], x_loc, side='right') - 1 + last_idx)
+                i = int(np.searchsorted(spline.x[last_idx : n_control - 1], x_loc, side='right') - 1 + last_idx)
             last_idx = i
         elif x_loc >= spline.x[last_idx]:
             i = last_idx
@@ -491,9 +496,11 @@ def _select_cubic_call(xint, spline, ext):  # noqa: ANN001, ANN202 # type: ignor
     assert isinstance(ext, numba.core.types.Integer)
     assert isinstance(spline, numba.core.types.NamedTuple)
     if isinstance(xint, numba.core.types.Float):
+
         def temp(xint, spline, ext):  # noqa: ANN001, ANN202 # type: ignore[reportRedeclaration]
             return cubic_call_scalar(xint, spline, ext)
     elif isinstance(xint, numba.core.types.Array):
+
         def temp(xint, spline, ext):  # noqa: ANN001, ANN202 # type: ignore[reportRedeclaration]
             return cubic_call_vector(xint, spline, ext)
     else:
@@ -543,7 +550,7 @@ class AkimaSpline:
         ext: int = 3,
         corner_model: int | str = 0,
         denom_small_cut: float = np.nan,
-        linear_vector_calls: int = 0
+        linear_vector_calls: int = 0,
     ) -> None:
         """Create an akima spline object.
 
@@ -595,21 +602,18 @@ class AkimaSpline:
         if np.isnan(self.denom_small_cut):
             if corner_model == 0:
                 # match gsl
-                self.denom_small_cut = 0.
+                self.denom_small_cut = 0.0
             elif self.corner_model == 2:
                 # cut is superfluous by design in the modified akima case
                 # because the slope is engineered to be zero when the denominator is zero
-                self.denom_small_cut = 0.
+                self.denom_small_cut = 0.0
             else:
                 # match scipy with cut
-                self.denom_small_cut = 1.e-9
+                self.denom_small_cut = 1.0e-9
 
         # get the spline object
         self.spline: SplineCoeffs = akima_create_helper(
-                x.copy(),
-                y.copy(),
-                corner_model=self.corner_model,
-                denom_small_cut=self.denom_small_cut
+            x.copy(), y.copy(), corner_model=self.corner_model, denom_small_cut=self.denom_small_cut
         )
 
     @overload

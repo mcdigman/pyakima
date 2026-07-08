@@ -1,4 +1,5 @@
 """Demonstrate speed of pyakima vs scipy and pygsl."""
+
 from time import perf_counter
 
 import matplotlib.pyplot as plt
@@ -9,15 +10,14 @@ from scipy.interpolate import Akima1DInterpolator
 from pyakima import AkimaSpline
 
 if __name__ == '__main__':
-
-    xs = np.linspace(0., 10., num=10001)
+    xs = np.linspace(0.0, 10.0, num=10001)
     ys_expect = np.sin(2 * np.pi * xs)
 
     x = xs[::25].copy()
     y = ys_expect[::25].copy()
 
     corner_model = 1
-    denom_small_cut = 0.
+    denom_small_cut = 0.0
 
     akima_my = AkimaSpline(x, y, corner_model=corner_model, denom_small_cut=denom_small_cut)
 
