@@ -15,7 +15,11 @@ env:
   # mypy runs only here (it is not a prek hook; pyrefly handles type checking in
   # lint.yml). Keep in sync with the mypy version in the [dev] extra.
   MYPY_VERSION: "1.18.2"
-  PYRIGHT_VERSION: "1.1.406"
+  # Must be new enough to understand the Python 3.14 stdlib: the job runs under
+  # 3.14 (PYTHON_VERSION), whose stdlib uses t-strings (string/templatelib.py).
+  # pyright <= 1.1.406 lacks a stub for it and parse-errors on that source under
+  # pythonVersion = "3.10"; 1.1.410+ ships the 3.14 typeshed and passes.
+  PYRIGHT_VERSION: "1.1.410"
 
 jobs:
   mypy:
