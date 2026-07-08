@@ -83,6 +83,23 @@ exclude = [
 module = ["numba", "numba.*"]
 ignore_missing_imports = true
 
+[tool.pydoclint]
+# Docstring-signature linting for the numpy-style docstrings in pyakima (run by
+# .github/workflows/docstrings.yml). pydoclint is the maintained successor to
+# the now-archived darglint; these options scope it to roughly the same rules
+# darglint enforced -- argument, return-presence, and raises consistency -- by
+# disabling the checks darglint does not perform:
+#   check-return-types  -> off : darglint does not check return types (DOC203)
+#   check-class-attributes -> off : darglint does not check class attrs (DOC60x)
+#   allow-init-docstring -> on : darglint documents __init__ args in __init__,
+#                                not the class docstring (DOC301)
+# The stricter-than-darglint DOC105 (arg type-hint matching) and DOC503 (raises
+# vs. `assert`) findings are intentionally left enabled.
+style = "numpy"
+check-return-types = false
+check-class-attributes = false
+allow-init-docstring = true
+
 [tool.pytest.ini_options]
 # Real unit tests live in tests/. There are none yet -- the directory is a
 # placeholder so pytest has a target; the test.yml workflow treats "no tests
