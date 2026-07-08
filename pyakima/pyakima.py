@@ -104,17 +104,17 @@ def akima_create_helper(
     # enforce required conditions
     n_control: int = x.size
     if n_control < 5:
-        msg = 'Need at least 5 control points'
-        raise ValueError(msg)
+        msg1 = 'Need at least 5 control points'
+        raise ValueError(msg1)
     if y.size != x.size:
-        msg = 'Input sizes must match'
-        raise ValueError(msg)
+        msg2 = 'Input sizes must match'
+        raise ValueError(msg2)
 
     # calculate the difference
     xdiffs: NDArray[np.floating] = np.diff(x)
     if not np.all(xdiffs > 0.0):
-        msg = 'x must be monotonically increasing'
-        raise ValueError(msg)
+        msg3 = 'x must be monotonically increasing'
+        raise ValueError(msg3)
 
     # set boolean variables to control the loop behavior in each corner model case
     if corner_model == 0:
@@ -133,8 +133,8 @@ def akima_create_helper(
         sharp_corners = False
         # denom_small_cut should be zero to match makima
     else:
-        msg = f'Unrecognized option for corner model {corner_model}'
-        raise ValueError(msg)
+        msg4 = f'Unrecognized option for corner model {corner_model}'
+        raise ValueError(msg4)
 
     # the numerically computed local slopes
     m = np.zeros(n_control + 3)
@@ -183,8 +183,8 @@ def akima_create_helper(
         if denom_small_cut == 0.0:
             denom_cut_loc: float = 0.0
         elif ~np.isfinite(denom_small_cut) or denom_small_cut < 0:
-            msg = 'denom_small_cut must be non-negative and finite'
-            raise ValueError(msg)
+            msg5 = 'denom_small_cut must be non-negative and finite'
+            raise ValueError(msg5)
         else:
             denom_cut_loc = denom_small_cut * dm2
 
@@ -303,8 +303,8 @@ def cubic_call_scalar(xint: float, spline: SplineCoeffs, ext: int) -> float:
         y_bound_low = 0.0
         y_bound_high = 0.0
     elif ext == 3:
-        y_bound_low = float(spline.y[0])
-        y_bound_high = float(spline.y[-1])
+        y_bound_low = spline.y[0]
+        y_bound_high = spline.y[-1]
     elif ext == 4:
         y_bound_low = np.nan
         y_bound_high = np.nan
@@ -375,8 +375,8 @@ def cubic_call_vector(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int
         y_bound_low = 0.0
         y_bound_high = 0.0
     elif ext == 3:
-        y_bound_low = float(spline.y[0])
-        y_bound_high = float(spline.y[-1])
+        y_bound_low = spline.y[0]
+        y_bound_high = spline.y[-1]
     elif ext == 4:
         y_bound_low = np.nan
         y_bound_high = np.nan
@@ -387,12 +387,12 @@ def cubic_call_vector(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int
     res = np.zeros(xint.size)
 
     # handle the initial value
-    last_idx: int = int(np.searchsorted(spline.x[: n_control - 1], float(xint[0]), side='right') - 1)
+    last_idx: int = int(np.searchsorted(spline.x[: n_control - 1], xint[0], side='right') - 1)
     if last_idx > n_control - 2:
         last_idx = n_control - 2 # should be unreachable from the searchsorted, but left as defensive
     elif last_idx < 0:
         last_idx = 0
-    res[0] = cubic_call_scalar(float(xint[0]), spline, ext)
+    res[0] = cubic_call_scalar(xint[0], spline, ext)
 
     # find the proper subspline for later iterations using previous results as a guess for the location
     for j in range(1, xint.size):
@@ -400,7 +400,7 @@ def cubic_call_vector(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int
         # we can use successive starting guesses to accelerate finding the nearest spline points
         # this speedup will get larger if there is more points; if less it might be better to do a linear search
 
-        x_loc = float(xint[j])
+        x_loc = xint[j]
 
         if x_loc < spline.x[0] and ext != 0:
             res[j] = y_bound_low
@@ -490,11 +490,11 @@ def cubic_call(xint: float | NDArray[np.floating], spline: SplineCoeffs, ext: in
 @numba.extending.overload(cubic_call)
 def _select_cubic_call(xint, spline, ext):  # noqa: ANN001, ANN202 # type: ignore[implicit-any-parameter]
     if not isinstance(ext, numba.core.types.Integer):
-        msg = 'Unsuported type of input: ' + str(type(ext))
-        raise TypeError(msg)
+        msg1 = 'Unsuported type of input: ' + str(type(ext))
+        raise TypeError(msg1)
     if not isinstance(spline, numba.core.types.NamedTuple):
-        msg = 'Unsuported type of input: ' + str(type(spline))
-        raise TypeError(msg)
+        msg2 = 'Unsuported type of input: ' + str(type(spline))
+        raise TypeError(msg2)
     if isinstance(xint, numba.core.types.Float):
 
         def temp(xint, spline, ext):  # noqa: ANN001, ANN202 # type: ignore[reportRedeclaration]
@@ -504,8 +504,8 @@ def _select_cubic_call(xint, spline, ext):  # noqa: ANN001, ANN202 # type: ignor
         def temp(xint, spline, ext):  # noqa: ANN001, ANN202 # type: ignore[reportRedeclaration]
             return cubic_call_vector(xint, spline, ext)
     else:
-        msg = 'Unsuported type of input: ' + str(type(xint))
-        raise TypeError(msg)
+        msg3 = 'Unsuported type of input: ' + str(type(xint))
+        raise TypeError(msg3)
     return temp
 
 
@@ -580,8 +580,8 @@ class AkimaSpline:
     ) -> None:
         # record the inputs
         if not linear_vector_calls in (0, 1):
-            msg = 'linear_vector_calls must be in (0, 1)'
-            raise ValueError(msg)
+            msg1 = 'linear_vector_calls must be in (0, 1)'
+            raise ValueError(msg1)
 
         self.ext: int = ext
         self.denom_small_cut: float = denom_small_cut
@@ -595,8 +595,8 @@ class AkimaSpline:
         elif corner_model in ('makima', 2):
             self.corner_model = 2
         else:
-            msg = f'Unrecognized option for corner model: {corner_model}'
-            raise ValueError(msg)
+            msg2 = f'Unrecognized option for corner model: {corner_model}'
+            raise ValueError(msg2)
 
         # default values for the denominator cutoff depend on the method
         if np.isnan(self.denom_small_cut):
@@ -612,8 +612,8 @@ class AkimaSpline:
                 self.denom_small_cut = 1.0e-9
 
         if self.denom_small_cut < 0.0 or ~np.isfinite(self.denom_small_cut):
-            msg = 'denom_small_cut must either be non-negative and finite or nan'
-            raise ValueError(msg)
+            msg3 = 'denom_small_cut must either be non-negative and finite or nan'
+            raise ValueError(msg3)
 
         # get the spline object
         self.spline: SplineCoeffs = akima_create_helper(
