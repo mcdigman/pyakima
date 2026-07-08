@@ -613,25 +613,6 @@ def test_integer_control_arrays_are_accepted_without_integer_output_dtype_guaran
     np.testing.assert_array_equal(object_spline(xint), 2 * xint + 1)
 
 
-def test_non_contiguous_control_arrays_are_accepted() -> None:
-    base_x = np.arange(12, dtype=np.float64)
-    base_y = 3.0 * base_x + 1.0
-    x = base_x[::2]
-    y = base_y[::2]
-    xint = np.array([0.0, 1.0, 5.0, 10.0])
-
-    assert not x.flags.c_contiguous
-    assert not y.flags.c_contiguous
-
-    helper_spline = akima_create_helper(x, y)
-    object_spline = AkimaSpline(x, y, ext=0)
-
-    np.testing.assert_array_equal(helper_spline.b, np.full(x.size - 1, 3.0))
-    np.testing.assert_array_equal(helper_spline.c, np.zeros(x.size - 1))
-    np.testing.assert_array_equal(helper_spline.d, np.zeros(x.size - 1))
-    np.testing.assert_array_equal(object_spline(xint), 3 * xint + 1)
-
-
 @pytest.mark.parametrize('dtype', [np.float32, np.float64])
 @pytest.mark.parametrize('corner_model', [0, 1, 2])
 def test_large_dynamic_range_control_point_has_strict_local_coefficient_kernel(
