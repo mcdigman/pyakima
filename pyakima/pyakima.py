@@ -399,16 +399,11 @@ def cubic_call_vector(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int
     dtype = xint.dtype
     res = np.zeros(xint.size, dtype=dtype)
 
-    # handle the initial value
-    last_idx: int = int(np.searchsorted(spline.x[: n_control - 1], xint[0], side='right') - 1)
-    if last_idx > n_control - 2:
-        last_idx = n_control - 2  # should be unreachable from the searchsorted, but left as defensive
-    elif last_idx < 0:
-        last_idx = 0
-    res[0] = cubic_call_scalar(xint[0], spline, ext)
+    # the first iteration has no previous result to use as a location guess, so start the search at the beginning
+    last_idx: int = 0
 
-    # find the proper subspline for later iterations using previous results as a guess for the location
-    for j in range(1, xint.size):
+    # find the proper subspline using previous results as a guess for the location
+    for j in range(xint.size):
         # by using fact that input xint will generally be sorted
         # we can use successive starting guesses to accelerate finding the nearest spline points
         # this speedup will get larger if there is more points; if less it might be better to do a linear search
@@ -429,7 +424,7 @@ def cubic_call_vector(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int
                 last_idx = n_control - 2
             continue
 
-        if x_loc > xint[j - 1]:
+        if j == 0 or x_loc > xint[j - 1]:
             if x_loc < spline.x[last_idx + 1]:
                 i = last_idx
             else:
