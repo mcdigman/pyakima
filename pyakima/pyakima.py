@@ -380,7 +380,7 @@ def cubic_call_vector(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int
     # handle the initial value
     last_idx: int = int(np.searchsorted(spline.x[: n_control - 1], float(xint[0]), side='right') - 1)
     if last_idx > n_control - 2:
-        last_idx = n_control - 2
+        last_idx = n_control - 2 # should be unreachable from the searchsorted, but left as defensive
     elif last_idx < 0:
         last_idx = 0
     res[0] = cubic_call_scalar(float(xint[0]), spline, ext)
@@ -415,6 +415,8 @@ def cubic_call_vector(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int
             last_idx = i
         elif x_loc >= spline.x[last_idx]:
             i = last_idx
+        elif x_loc <= spline.x[0]:
+            i = 0
         else:
             i = int(np.searchsorted(spline.x[:last_idx], x_loc, side='right') - 1)
 
@@ -593,6 +595,10 @@ class AkimaSpline:
             else:
                 # match scipy with cut
                 self.denom_small_cut = 1.0e-9
+
+        if self.denom_small_cut < 0.0 or ~np.isfinite(self.denom_small_cut):
+            msg = 'denom_small_cut must either be non-negative and finite or nan'
+            raise ValueError(msg)
 
         # get the spline object
         self.spline: SplineCoeffs = akima_create_helper(
