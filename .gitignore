@@ -6,6 +6,7 @@ dist/
 *.swp
 .skylos/
 .coverage
+tach.toml
 
 # Byte-compiled / caches
 __pycache__/
