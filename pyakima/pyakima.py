@@ -284,7 +284,8 @@ def cubic_call_scalar(xint: float, spline: SplineCoeffs, ext: int) -> float:
     """
     Call cubic spline with a scalar.
 
-    Linearly searches through control points; more intelligent searches are possible, see e.g. cubic_call_vector
+    Searches the control points either with a binary search;
+    more intelligent searches are possible, see e.g. cubic_call_vector
 
     Parameters
     ----------
@@ -299,11 +300,6 @@ def cubic_call_scalar(xint: float, spline: SplineCoeffs, ext: int) -> float:
     -------
     float
         interpolated y value.
-
-    Raises
-    ------
-    ValueError
-        if the extrapolation option is unrecognized.
     """
     n_control = spline.n_control
 
@@ -329,13 +325,13 @@ def cubic_call_scalar(xint: float, spline: SplineCoeffs, ext: int) -> float:
         return y_bound_low
     if xint > spline.x[-1] and ext != 0:
         return y_bound_high
-    # find the proper subspline
-    for i in range(n_control - 2):
-        if xint < spline.x[i + 1]:
-            return spline_single_knot_eval(xint, spline, i)
 
-    # always evaluate using last iteration if we get here
-    return spline_single_knot_eval(xint, spline, n_control - 2)
+    # find the proper subspline
+    # locate the enclosing subspline directly with a binary search
+    i = np.searchsorted(spline.x[: n_control - 1], xint, side='right') - 1
+    if i < 0:
+        i = 0  # only reachable when ext == 0 and xint is below the first control point
+    return spline_single_knot_eval(xint, spline, i)
 
 
 @njit()
@@ -428,14 +424,14 @@ def cubic_call_vector(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int
             if x_loc < spline.x[last_idx + 1]:
                 i = last_idx
             else:
-                i = int(np.searchsorted(spline.x[last_idx : n_control - 1], x_loc, side='right') - 1 + last_idx)
+                i = np.searchsorted(spline.x[last_idx : n_control - 1], x_loc, side='right') - 1 + last_idx
             last_idx = i
         elif x_loc >= spline.x[last_idx]:
             i = last_idx
         elif x_loc <= spline.x[0]:
             i = 0
         else:
-            i = int(np.searchsorted(spline.x[:last_idx], x_loc, side='right') - 1)
+            i = np.searchsorted(spline.x[:last_idx], x_loc, side='right') - 1
 
         last_idx = i
 
