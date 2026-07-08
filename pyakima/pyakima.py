@@ -503,7 +503,7 @@ def cubic_call(xint: float | NDArray[np.floating], spline: SplineCoeffs, ext: in
 
 
 @numba.extending.overload(cubic_call)
-def _select_cubic_call(xint, spline, ext):  # noqa: ANN001, ANN202 # type: ignore[implicit-any-parameter]
+def _select_cubic_call(xint, spline, ext):  # noqa: ANN001, ANN202 # type: ignore[implicit-any-parameter] # skylos: ignore[SKY-U002]
     if not isinstance(ext, numba.core.types.Integer):
         msg1 = 'Unsuported type of input: ' + str(type(ext))
         raise TypeError(msg1)
