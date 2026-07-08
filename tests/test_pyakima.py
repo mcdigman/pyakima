@@ -499,10 +499,10 @@ def test_cubic_call_rejects_non_float_scalar_and_non_array_inputs() -> None:
     spline = AkimaSpline(x, y)
 
     with pytest.raises(TypeError):
-        cubic_call(1, spline.spline, 3)
+        cubic_call(1, spline.spline, 3)  # type: ignore
 
     with pytest.raises(TypeError):
-        cubic_call([0.5, 1.5], spline.spline, 3)
+        cubic_call([0.5, 1.5], spline.spline, 3)  # type: ignore
 
     with pytest.raises(TypeError):
         spline(1)
@@ -514,7 +514,7 @@ def test_numba_overload_rejects_non_integer_ext_type() -> None:
 
     @njit()
     def call_with_float_ext(xint: float, spline_coeffs: SplineCoeffs) -> float:
-        return cubic_call(xint, spline_coeffs, 3.0)
+        return cubic_call(xint, spline_coeffs, 3.0)  # type: ignore
 
     with pytest.raises(TypeError, match='Unsuported type of input'):
         call_with_float_ext(0.5, spline.spline)
@@ -523,7 +523,7 @@ def test_numba_overload_rejects_non_integer_ext_type() -> None:
 def test_numba_overload_rejects_non_spline_type() -> None:
     @njit()
     def call_with_float_spline(xint: float) -> float:
-        return cubic_call(xint, 1.0, 3)
+        return cubic_call(xint, 1.0, 3)  # type: ignore
 
     with pytest.raises(TypeError, match='Unsuported type of input'):
         call_with_float_spline(0.5)
@@ -535,7 +535,7 @@ def test_numba_overload_rejects_unsupported_xint_type() -> None:
 
     @njit()
     def call_with_integer_xint(spline_coeffs: SplineCoeffs) -> float:
-        return cubic_call(1, spline_coeffs, 3)
+        return cubic_call(1, spline_coeffs, 3)  # type: ignore
 
     with pytest.raises(TypeError, match='Unsuported type of input'):
         call_with_integer_xint(spline.spline)

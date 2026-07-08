@@ -65,6 +65,7 @@ repos:
     additional_dependencies:
       - numpy>=1.22
       - numba
+      - pytest
 
 - repo: https://github.com/rhysd/actionlint
   rev: v1.7.12

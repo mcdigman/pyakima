@@ -389,7 +389,7 @@ def cubic_call_vector(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int
     # handle the initial value
     last_idx: int = int(np.searchsorted(spline.x[: n_control - 1], xint[0], side='right') - 1)
     if last_idx > n_control - 2:
-        last_idx = n_control - 2 # should be unreachable from the searchsorted, but left as defensive
+        last_idx = n_control - 2  # should be unreachable from the searchsorted, but left as defensive
     elif last_idx < 0:
         last_idx = 0
     res[0] = cubic_call_scalar(xint[0], spline, ext)
@@ -579,7 +579,7 @@ class AkimaSpline:
         linear_vector_calls: int = 0,
     ) -> None:
         # record the inputs
-        if not linear_vector_calls in (0, 1):
+        if linear_vector_calls not in (0, 1):
             msg1 = 'linear_vector_calls must be in (0, 1)'
             raise ValueError(msg1)
 
