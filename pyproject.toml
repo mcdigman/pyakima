@@ -48,6 +48,7 @@ demos = [
 # packages listed in that hook's additional_dependencies (numpy ships py.typed).
 # demos/ pulls in scipy/matplotlib/pygsl_lite, which the hook does not install,
 # so it is excluded here.
+preset = "strict"
 project-includes = [
     "**/*.py*",
     "**/*.ipynb",

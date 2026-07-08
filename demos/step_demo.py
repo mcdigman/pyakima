@@ -1,6 +1,7 @@
 """
-C Matthew Digman 2025
-demo to demonstrate calling python akima method
+Demonstrate calling python akima method.
+
+Copyright Matthew Digman 2025
 
 """
 

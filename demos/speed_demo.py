@@ -1,4 +1,4 @@
-"""demonstrate speed of pyakima vs scipy and pygsl"""
+"""Demonstrate speed of pyakima vs scipy and pygsl."""
 from time import perf_counter
 
 import matplotlib.pyplot as plt

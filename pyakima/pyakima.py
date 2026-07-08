@@ -1,6 +1,6 @@
 """Python Akima Spline Implementation.
 
-C Matthew Digman 2025
+Copyright Matthew Digman 2025
 
 objects defined:
 
@@ -440,6 +440,43 @@ def cubic_call(xint: float, spline: SplineCoeffs, ext: int) -> float: ...
 @overload
 def cubic_call(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int) -> NDArray[np.floating]: ...
 def cubic_call(xint: float | NDArray[np.floating], spline: SplineCoeffs, ext: int) -> float | NDArray[np.floating]:
+    """
+    Evaluate akima splines with scalar or vector input.
+
+    Note that there are several possible implementations of this method
+    that could be best in various circumstances.
+    The current implementation can take advantage of
+    the assumption that xint is typically likely to be sorted (either forward or reversed)
+    but does not require it; if the application was required to be sorted
+    (or the specific sort order was known)
+    a somewhat more efficient implementation would be possible.
+    If instead the input was very likely not to have any particular order,
+    it could be better not to even check if it is sorted.
+    Especially for small inputs (either in spline.x or xint), or when run on a GPU,
+    it might be faster to drop any correlation between values
+    of xint so that the evaluation can better proceed in parallel.
+    Depending on the application, lazy evaluation of spline coefficients
+    could be more efficient, but is not implemented here yet.
+
+    Parameters
+    ----------
+    xint: float | NDArray[np.floating]
+        array of points at which to evaluate the spline
+    spline: SplineCoeffs
+        a SplineCoeffs object representing the spline with points to evaluate
+    ext: int
+        integer flag to select method of bounds handling
+
+    Returns
+    -------
+    float | NDArray[np.floating]
+        array of same size as xint containing interpolated y values
+
+    Raises
+    ------
+    ValueError
+        if the extrapolation method is unrecognized
+    """
     # implement in the select function
     if isinstance(xint, np.ndarray):
         return cubic_call_vector(xint, spline, ext)
@@ -449,13 +486,8 @@ def cubic_call(xint: float | NDArray[np.floating], spline: SplineCoeffs, ext: in
     raise TypeError(msg)
 
 
-# @overload
-# def select_cubic_call(xint: float, spline: SplineCoeffs, ext: int) -> float: ...
-# @overload
-# def select_cubic_call(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int) -> NDArray[np.floating]: ...
 @numba.extending.overload(cubic_call)
-# def select_cubic_call(xint: float | NDArray[np.floating], spline: SplineCoeffs, ext: int) -> float | NDArray[np.floating]:
-def _select_cubic_call(xint, spline, ext):  # noqa: ANN001, ANN202
+def _select_cubic_call(xint, spline, ext):  # noqa: ANN001, ANN202 # type: ignore[implicit-any-parameter]
     assert isinstance(ext, numba.core.types.Integer)
     assert isinstance(spline, numba.core.types.NamedTuple)
     if isinstance(xint, numba.core.types.Float):
@@ -465,15 +497,9 @@ def _select_cubic_call(xint, spline, ext):  # noqa: ANN001, ANN202
         def temp(xint, spline, ext):  # noqa: ANN001, ANN202 # type: ignore[reportRedeclaration]
             return cubic_call_vector(xint, spline, ext)
     else:
-        print(type(xint))
-        print(type(spline))
-        print(type(ext))
         msg = 'Unsuported type of input: ' + str(type(xint))
         raise TypeError(msg)
     return temp
-
-
-# numba.extending.overload(select_cubic_call)(lambda xint, spline, ext: select_cubic_call)
 
 
 @njit()
