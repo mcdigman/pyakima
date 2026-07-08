@@ -36,7 +36,7 @@ if __name__ == '__main__':
     y_akima_scipy2_actual = Akima1DInterpolator(x, y, extrapolate=False, method='makima')(xs)
     assert_allclose(y_akima_scipy2, y_akima_scipy2_actual, atol=1.0e-14, rtol=1.0e-14)
 
-    fig, ax = plt.subplots()
+    _fig, ax = plt.subplots()
     ax.plot(x, y, 'o', label='data')
     ax.plot(xs, y_akima_scipy1, label='scipy akima')
     ax.plot(xs, y_akima_scipy2, label='scipy makima')

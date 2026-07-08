@@ -280,7 +280,7 @@ def cubic_call_scalar(xint: float, spline: SplineCoeffs, ext: int) -> float:
     """
     Call cubic spline with a scalar.
 
-    Searches the control points either with a binary search;
+    Searches the control points with a binary search;
     more intelligent searches are possible, see e.g. cubic_call_vector
 
     Parameters
@@ -529,7 +529,7 @@ def cubic_call_vector_linear(xint: NDArray[np.floating], spline: SplineCoeffs, e
     """
     Evaluate akima splines with a vector input using independent loop iterations.
 
-    Produces the same result as cubic_call_vector_linear, but inlines the per-point logic of
+    Produces the same result as cubic_call_vector, but inlines the per-point logic of
     cubic_call_scalar so the ext parsing is done once up front rather than on every iteration
     (as cubic_call_vector also does). Loop iterations remain uncorrelated (no shared location
     guess), so this may be faster when xint is not at least partially sorted or on some compute

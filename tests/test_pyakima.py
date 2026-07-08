@@ -660,16 +660,18 @@ def test_invalid_extrapolation_mode_raises_for_all_call_paths() -> None:
         np.array([], dtype=np.float64),
     ],
 )
-def test_scalar_vector_dispatch_and_linear_vector_paths_agree(xint: np.ndarray) -> None:
+@pytest.mark.parametrize('ext', [0, 1, 3, 4])
+def test_scalar_vector_dispatch_and_linear_vector_paths_agree(xint: np.ndarray, ext: int) -> None:
     x, y = _nonlinear_control_points()
-    spline = AkimaSpline(x, y, ext=0)
+    spline = AkimaSpline(x, y, ext=ext)
+    assert np.any(spline.spline.c != 0.0) or np.any(spline.spline.d != 0.0)
 
-    scalar_values = np.array([cubic_call_scalar(float(point), spline.spline, 0) for point in xint])
-    vector_values = cubic_call_vector(xint, spline.spline, 0)
-    linear_vector_values = cubic_call_vector_linear(xint, spline.spline, 0)
-    dispatch_values = cubic_call(xint, spline.spline, 0)
+    scalar_values = np.array([cubic_call_scalar(float(point), spline.spline, ext) for point in xint])
+    vector_values = cubic_call_vector(xint, spline.spline, ext)
+    linear_vector_values = cubic_call_vector_linear(xint, spline.spline, ext)
+    dispatch_values = cubic_call(xint, spline.spline, ext)
     class_values = spline(xint)
-    linear_class_values = AkimaSpline(x, y, ext=0, linear_vector_calls=1)(xint)
+    linear_class_values = AkimaSpline(x, y, ext=ext, linear_vector_calls=1)(xint)
 
     _assert_same_float_values(vector_values, scalar_values, maxulp=0)
     _assert_same_float_values(linear_vector_values, scalar_values, maxulp=0)
@@ -777,6 +779,26 @@ def test_integer_control_arrays_are_accepted_without_integer_output_dtype_guaran
     np.testing.assert_array_equal(helper_spline.c, np.zeros(x.size - 1))
     np.testing.assert_array_equal(helper_spline.d, np.zeros(x.size - 1))
     np.testing.assert_array_equal(object_spline(xint), 2 * xint + 1)
+
+
+@pytest.mark.parametrize(
+    ('x_dtype', 'y_dtype'),
+    [(np.float32, np.float64), (np.float64, np.float32)],
+)
+def test_mixed_float_control_dtypes_are_accepted_and_coefficients_follow_x_dtype(
+    x_dtype: type[np.floating],
+    y_dtype: type[np.floating],
+) -> None:
+    x = np.arange(6, dtype=x_dtype)
+    y = np.array([0.0, 1.0, 0.5, 2.0, -1.0, 3.0], dtype=y_dtype)
+
+    helper_spline = akima_create_helper(x, y)
+    object_spline = AkimaSpline(x, y, ext=0).spline
+
+    for spline in (helper_spline, object_spline):
+        assert spline.x.dtype == np.dtype(x_dtype)
+        assert spline.y.dtype == np.dtype(y_dtype)
+        assert {spline.a.dtype, spline.b.dtype, spline.c.dtype, spline.d.dtype} == {np.dtype(x_dtype)}
 
 
 @pytest.mark.parametrize('dtype', [np.float32, np.float64])
