@@ -37,6 +37,7 @@ if TYPE_CHECKING:
 CONTROL_POINT_LENGTHS = (5, 64, 4096)
 SCALAR_GRID_LENGTH = 257
 VECTOR_CALL_LENGTHS = (8, 1000, 10000, 100000)
+VECTOR_JIT_MIN_EVALS = 8192
 EXT = 0
 MIN_SECONDS = 0.01
 REPEATS = 5
@@ -269,6 +270,22 @@ def _cubic_call_scalar_grid_jit(x_scalars: np.ndarray, spline: SplineCoeffs, ext
     return total
 
 
+@numba.njit()
+def _cubic_call_vector_loop_jit(
+    x_eval: np.ndarray,
+    spline: SplineCoeffs,
+    ext: int,
+    inner_loops: int,
+) -> float:
+    total = 0.0
+    for _ in range(inner_loops):
+        values = cubic_call(x_eval, spline, ext)
+        total += values[0]
+        if values.size > 1:
+            total += values[-1]
+    return total
+
+
 def _run_loop(callback: Callable[[], object], loops: int) -> float:
     start = perf_counter()
     for _ in range(loops):
@@ -320,6 +337,19 @@ def _time_scalar_jit_grid_required(x_scalars: np.ndarray, spline: SplineCoeffs) 
         msg = 'required jitted scalar-grid timing unexpectedly failed'
         raise RuntimeError(msg)
     return Timing(timing.seconds / x_scalars.size, timing.loops * x_scalars.size)
+
+
+def _vector_jit_inner_loops(n_eval: int) -> int:
+    return max(1, VECTOR_JIT_MIN_EVALS // n_eval)
+
+
+def _time_vector_jit_loop_required(x_eval: np.ndarray, spline: SplineCoeffs) -> Timing:
+    inner_loops = _vector_jit_inner_loops(x_eval.size)
+    timing = _time_required(lambda: _cubic_call_vector_loop_jit(x_eval, spline, EXT, inner_loops))
+    if timing.seconds is None:
+        msg = 'required jitted vector-loop timing unexpectedly failed'
+        raise RuntimeError(msg)
+    return Timing(timing.seconds / inner_loops, timing.loops * inner_loops)
 
 
 def _format_time(timing: Timing) -> str:
@@ -449,6 +479,7 @@ def _scalar_rows(options: DemoOptions) -> list[tuple[str, ...]]:
                     _format_time(scalar_jit_time),
                     _format_time(alternate_time),
                     _format_speedup(pyakima_timings, alternate_time),
+                    _format_speedup((scalar_jit_time,), alternate_time),
                 )
             )
     return rows
@@ -478,6 +509,7 @@ def _vector_rows(options: DemoOptions) -> list[tuple[str, ...]]:
                         EXT,
                     )
                 )
+                vector_jit_time = _time_vector_jit_loop_required(x_eval, coeffs)
                 pyakima_timings = [vector_time, vector_linear_time]
                 overhead_cells: tuple[str, ...] = ()
                 if options.show_overhead:
@@ -519,8 +551,10 @@ def _vector_rows(options: DemoOptions) -> list[tuple[str, ...]]:
                         *overhead_cells,
                         _format_time(vector_time),
                         _format_time(vector_linear_time),
+                        _format_time(vector_jit_time),
                         _format_time(alternate_time),
                         _format_speedup(pyakima_timings, alternate_time),
+                        _format_speedup((vector_jit_time,), alternate_time),
                     )
                 )
     return rows
@@ -547,6 +581,7 @@ def main() -> None:
         'scalar fn is one Python call per point; scalar jit loops over the same points inside njit '
         'and is excluded from py-call speedup'
     )
+    print('fully-jitted speedup compares alternate backends with njit caller timings')
 
     _print_availability()
     _print_table(
@@ -571,6 +606,7 @@ def main() -> None:
             'scalar jit',
             'alt time',
             'py-call speedup',
+            'fully-jitted speedup',
         ),
         _scalar_rows(options),
     )
@@ -583,8 +619,10 @@ def main() -> None:
             *vector_overhead_columns,
             'vector fn',
             'linear fn',
+            'cubic_call jit',
             'alt time',
             'py speedup',
+            'fully-jitted speedup',
         ),
         _vector_rows(options),
     )
