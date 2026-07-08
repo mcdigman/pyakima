@@ -231,12 +231,19 @@ def _call_gsl_vector(spline: object, xint: np.ndarray) -> object:
     return spline.eval_vector(xint)
 
 
+def _call_python_spline(spline: Callable[[float | np.ndarray], object], xint: float | np.ndarray) -> object:
+    return spline(xint)
+
+
 def _call_alternate(spline: object, model: ModelCase, xint: float | np.ndarray) -> object:
     if model.alternate == 'gsl':
         if isinstance(xint, np.ndarray):
             return _call_gsl_vector(spline, xint)
         return _call_gsl_scalar(spline, xint)
-    return spline(xint)
+    if not callable(spline):
+        msg = f'{model.alternate} spline is not callable'
+        raise TypeError(msg)
+    return _call_python_spline(spline, xint)
 
 
 def _run_loop(callback: Callable[[], object], loops: int) -> float:
