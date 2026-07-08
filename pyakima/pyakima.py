@@ -247,7 +247,7 @@ def akima_create_helper(
 @overload
 def spline_single_knot_eval(xint: float | np.floating, spline: SplineCoeffs, i: int) -> float: ...
 @overload
-def spline_single_knot_eval(xint: NDArray[np.floating], spline: SplineCoeffs, i: int) -> NDArray[np.floating]: ...
+def spline_single_knot_eval(xint: NDArray[np.floating], spline: SplineCoeffs, i: int) -> NDArray[np.floating]: ...  # type: ignore[overload-cannot-match]
 @njit()
 def spline_single_knot_eval(
     xint: float | np.floating | NDArray[np.floating], spline: SplineCoeffs, i: int

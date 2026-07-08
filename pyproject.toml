@@ -81,7 +81,7 @@ exclude = [
 
 [[tool.mypy.overrides]]
 module = ["numba", "numba.*"]
-ignore_missing_imports = true
+
 
 [tool.pydoclint]
 # Docstring-signature linting for the numpy-style docstrings in pyakima (run by
