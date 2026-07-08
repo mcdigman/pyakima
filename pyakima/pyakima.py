@@ -516,11 +516,13 @@ def _select_cubic_call(xint, spline, ext):  # noqa: ANN001, ANN202 # type: ignor
 @njit()
 def cubic_call_vector_linear(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int) -> NDArray[np.floating]:
     """
-    Evaluate akima splines with a scalar input.
+    Evaluate akima splines with a vector input using independent loop iterations.
 
-    Helper similar to cubic_call_vector (see more discussion there), but make loop iterations uncorrelated.
-    This method may be faster if xint not at least partially sorted
-    or on some compute architectures (this method is more readily parallelizable)
+    Produces the same result as cubic_call_vector_linear, but inlines the per-point logic of
+    cubic_call_scalar so the ext parsing is done once up front rather than on every iteration
+    (as cubic_call_vector also does). Loop iterations remain uncorrelated (no shared location
+    guess), so this may be faster when xint is not at least partially sorted or on some compute
+    architectures (this method is more readily parallelizable).
 
     Parameters
     ----------
@@ -535,13 +537,52 @@ def cubic_call_vector_linear(xint: NDArray[np.floating], spline: SplineCoeffs, e
     -------
     NDArray[np.floating]
         array of the same size as xint containing interpolated y values.
+
+    Raises
+    ------
+    ValueError
+        if the extrapolation method is unrecognized.
     """
+    n_control = spline.n_control
+
+    # boundary value handling, parsed once outside the loop
+    if ext == 0:
+        y_bound_low = np.nan
+        y_bound_high = np.nan
+    elif ext == 1:
+        y_bound_low = 0.0
+        y_bound_high = 0.0
+    elif ext == 3:
+        y_bound_low = spline.y[0]
+        y_bound_high = spline.y[-1]
+    elif ext == 4:
+        y_bound_low = np.nan
+        y_bound_high = np.nan
+    else:
+        msg = f'Unrecognized option for extrapolation: {ext}'
+        raise ValueError(msg)
+
     dtype = xint.dtype
     res = np.zeros(xint.size, dtype=dtype)
-    # iterate over every input point
+
+    # iterate over every input point; iterations are independent (no shared location guess)
     for j in range(xint.size):
-        # let cubic_call_scalar handle finding the correct subspline and evaluating
-        res[j] = cubic_call_scalar(xint[j], spline, ext)
+        x_loc = xint[j]
+
+        # for constant boundary value handling
+        if x_loc < spline.x[0] and ext != 0:
+            res[j] = y_bound_low
+            continue
+        if x_loc > spline.x[-1] and ext != 0:
+            res[j] = y_bound_high
+            continue
+
+        # locate the enclosing subspline directly with a binary search
+        i = np.searchsorted(spline.x[: n_control - 1], x_loc, side='right') - 1
+        if i < 0:
+            i = 0  # only reachable when ext == 0 and x_loc is below the first control point
+        res[j] = spline_single_knot_eval(x_loc, spline, i)
+
     return res
 
 
