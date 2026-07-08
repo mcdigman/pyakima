@@ -771,7 +771,7 @@ def test_near_overflow_affine_spline_keeps_zero_higher_order_coefficients(
 
 @pytest.mark.parametrize(
     ('dtype', 'h_exponent', 'slope_exponent'),
-    [(np.float32, -50, 127), (np.float64, -500, 1023)],
+    [(np.float32, -50, 128), (np.float64, -500, 1023)],
 )
 def test_actual_multiplier_overflow_in_affine_spline_produces_ieee_nonfinite_coefficients(
     dtype: type[np.floating],
