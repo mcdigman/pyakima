@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  PYTHON_VERSION: "3.13"
+  PYTHON_VERSION: "3.14"
   # mypy runs only here (it is not a prek hook; pyrefly handles type checking in
   # lint.yml). Keep in sync with the mypy version in the [dev] extra.
   MYPY_VERSION: "1.18.2"
