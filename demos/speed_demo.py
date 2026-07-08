@@ -2,7 +2,6 @@
 
 from time import perf_counter
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pygsl_lite.spline
 from scipy.interpolate import Akima1DInterpolator
@@ -76,16 +75,3 @@ if __name__ == '__main__':
     t2 = perf_counter()
 
     print('my    eval time    corner 0 %.3e' % ((t2 - t1) / n_run))
-
-    do_plots = False
-    if do_plots:
-        fig, ax = plt.subplots()
-        ax.plot(x, y, 'o', label='data')
-        ax.plot(xs, y_akima_scipy, label='scipy makima')
-        ax.plot(xs, y_akima_gsl, label='gsl akima')
-        ax.plot(xs, y_akima_my, label='my akima')
-        ax.plot(xs, ys_expect, 'k--', label='true function', alpha=0.5)
-        ax.legend()
-        ax.set_xlabel('x')
-        ax.set_ylabel('y')
-        plt.show()
