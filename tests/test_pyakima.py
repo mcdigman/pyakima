@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 import pytest
 from numba import njit
@@ -18,6 +20,9 @@ from pyakima.pyakima import (
     cubic_call_vector_linear,
     spline_single_knot_eval,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def _affine_control_points(dtype: type[np.floating] = np.float64) -> tuple[np.ndarray, np.ndarray]:
@@ -103,6 +108,19 @@ def _power_of_two_affine_points(
     delta_y = _power_of_two(dtype, h_exponent + slope_exponent)
     index = np.arange(12, dtype=dtype)
     return index * h, index * delta_y, _power_of_two(dtype, slope_exponent)
+
+
+def _typed_affine_spline(dtype: type[np.floating]) -> SplineCoeffs:
+    x, y = _affine_control_points(dtype)
+    return SplineCoeffs(
+        x=x,
+        y=y,
+        n_control=x.size,
+        a=y[:-1].copy(),
+        b=np.full(x.size - 1, dtype(2), dtype=dtype),
+        c=np.zeros(x.size - 1, dtype=dtype),
+        d=np.zeros(x.size - 1, dtype=dtype),
+    )
 
 
 @pytest.mark.parametrize('corner_model', [0, 1, 2, 'non-rounded', 'akima', 'makima'])
@@ -499,10 +517,10 @@ def test_cubic_call_rejects_non_float_scalar_and_non_array_inputs() -> None:
     spline = AkimaSpline(x, y)
 
     with pytest.raises(TypeError):
-        cubic_call(1, spline.spline, 3)  # type: ignore
+        cubic_call(1, spline.spline, 3)  # type: ignore[arg-type]
 
     with pytest.raises(TypeError):
-        cubic_call([0.5, 1.5], spline.spline, 3)  # type: ignore
+        cubic_call([0.5, 1.5], spline.spline, 3)  # type: ignore[arg-type]
 
     with pytest.raises(TypeError):
         spline(1)
@@ -514,7 +532,7 @@ def test_numba_overload_rejects_non_integer_ext_type() -> None:
 
     @njit()
     def call_with_float_ext(xint: float, spline_coeffs: SplineCoeffs) -> float:
-        return cubic_call(xint, spline_coeffs, 3.0)  # type: ignore
+        return cubic_call(xint, spline_coeffs, 3.0)  # type: ignore[arg-type]
 
     with pytest.raises(TypeError, match='Unsuported type of input'):
         call_with_float_ext(0.5, spline.spline)
@@ -523,7 +541,7 @@ def test_numba_overload_rejects_non_integer_ext_type() -> None:
 def test_numba_overload_rejects_non_spline_type() -> None:
     @njit()
     def call_with_float_spline(xint: float) -> float:
-        return cubic_call(xint, 1.0, 3)  # type: ignore
+        return cubic_call(xint, 1.0, 3)  # type: ignore[arg-type]
 
     with pytest.raises(TypeError, match='Unsuported type of input'):
         call_with_float_spline(0.5)
@@ -535,7 +553,7 @@ def test_numba_overload_rejects_unsupported_xint_type() -> None:
 
     @njit()
     def call_with_integer_xint(spline_coeffs: SplineCoeffs) -> float:
-        return cubic_call(1, spline_coeffs, 3)  # type: ignore
+        return cubic_call(1, spline_coeffs, 3)  # type: ignore[arg-type]
 
     with pytest.raises(TypeError, match='Unsuported type of input'):
         call_with_integer_xint(spline.spline)
@@ -817,22 +835,47 @@ def test_single_knot_eval_preserves_ieee_zero_times_infinity(b: float, c: float,
 
 
 @pytest.mark.parametrize('dtype', [np.float32, np.float64])
-def test_array_output_precision_matches_input_precision(dtype: type[np.floating]) -> None:
+def test_akima_spline_coefficients_preserve_input_precision(dtype: type[np.floating]) -> None:
     x, y = _affine_control_points(dtype)
     spline = AkimaSpline(x, y)
-    xint = np.array([0.5, 1.5], dtype=dtype)
 
     coeff_dtypes = {spline.spline.a.dtype, spline.spline.b.dtype, spline.spline.c.dtype, spline.spline.d.dtype}
     assert coeff_dtypes == {np.dtype(dtype)}
-    assert spline(xint).dtype == np.dtype(dtype)
-    assert cubic_call_vector(xint, spline.spline, 3).dtype == np.dtype(dtype)
-    assert cubic_call_vector_linear(xint, spline.spline, 3).dtype == np.dtype(dtype)
-    assert spline_single_knot_eval(xint, spline.spline, 0).dtype == np.dtype(dtype)
 
 
-def test_float32_scalar_output_precision_matches_input_precision() -> None:
-    x, y = _affine_control_points(np.float32)
-    spline = AkimaSpline(x, y)
+@pytest.mark.parametrize('dtype', [np.float32, np.float64])
+def test_single_knot_vector_eval_preserves_input_precision_with_typed_spline(dtype: type[np.floating]) -> None:
+    spline = _typed_affine_spline(dtype)
+    xint = np.array([0.5, 1.5], dtype=dtype)
 
-    assert isinstance(cubic_call(np.float32(0.5), spline.spline, 3), np.float32)
-    assert isinstance(spline(np.float32(0.5)), np.float32)
+    assert spline_single_knot_eval(xint, spline, 0).dtype == np.dtype(dtype)
+
+
+@pytest.mark.parametrize('dtype', [np.float32, np.float64])
+def test_single_knot_scalar_eval_preserves_input_precision_with_typed_spline(dtype: type[np.floating]) -> None:
+    spline = _typed_affine_spline(dtype)
+
+    assert isinstance(spline_single_knot_eval(dtype(0.5), spline, 0), dtype)
+
+
+@pytest.mark.parametrize('call', [cubic_call_vector, cubic_call_vector_linear, cubic_call])
+@pytest.mark.parametrize('dtype', [np.float32, np.float64])
+def test_vector_call_eval_preserves_input_precision_with_typed_spline(
+    dtype: type[np.floating],
+    call: Callable[[np.ndarray, SplineCoeffs, int], np.ndarray],
+) -> None:
+    spline = _typed_affine_spline(dtype)
+    xint = np.array([0.5, 1.5], dtype=dtype)
+
+    assert call(xint, spline, 3).dtype == np.dtype(dtype)
+
+
+@pytest.mark.parametrize('call', [cubic_call_scalar, cubic_call])
+@pytest.mark.parametrize('dtype', [np.float32, np.float64])
+def test_scalar_call_eval_preserves_input_precision_with_typed_spline(
+    dtype: type[np.floating],
+    call: Callable[[np.floating, SplineCoeffs, int], np.floating | float],
+) -> None:
+    spline = _typed_affine_spline(dtype)
+
+    assert isinstance(call(dtype(0.5), spline, 3), dtype)

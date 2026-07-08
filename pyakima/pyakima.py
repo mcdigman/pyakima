@@ -111,10 +111,16 @@ def akima_create_helper(
         raise ValueError(msg2)
 
     # calculate the difference
-    xdiffs: NDArray[np.floating] = np.diff(x)
+    xdiffs = np.diff(x)
     if not np.all(xdiffs > 0.0):
         msg3 = 'x must be monotonically increasing'
         raise ValueError(msg3)
+
+    # get the input precision
+    dtype = x.dtype
+    if not y.dtype == dtype:
+        msg = 'x and y must be the same input precision'
+        raise TypeError(msg)
 
     # set boolean variables to control the loop behavior in each corner model case
     if corner_model == 0:
@@ -137,7 +143,7 @@ def akima_create_helper(
         raise ValueError(msg4)
 
     # the numerically computed local slopes
-    m = np.zeros(n_control + 3)
+    m = np.zeros(n_control + 3, dtype=dtype)
 
     m[2 : n_control + 1] = np.diff(y) / xdiffs  # local slopes
 
@@ -147,8 +153,8 @@ def akima_create_helper(
     m[n_control + 1] = 2 * m[n_control] - m[n_control - 1]
     m[n_control + 2] = 3 * m[n_control] - 2 * m[n_control - 1]
 
-    t_left = np.zeros(n_control)  # left sided slopes
-    t_right = np.zeros(n_control)  # right side slopes (differ from t_left only for non-rounded corner handling)
+    t_left = np.zeros(n_control, dtype=dtype)  # left sided slopes
+    t_right = np.zeros(n_control, dtype=dtype)  # right side slopes (differ from t_left only for non-rounded corner handling)
 
     # loop through the control points
     for i in range(n_control):
@@ -213,10 +219,10 @@ def akima_create_helper(
         t_right[i] = t_left[i]
 
     # create the arrays to store spline coefficients
-    a = np.zeros(n_control - 1)
-    b = np.zeros(n_control - 1)
-    c = np.zeros(n_control - 1)
-    d = np.zeros(n_control - 1)
+    a = np.zeros(n_control - 1, dtype=dtype)
+    b = np.zeros(n_control - 1, dtype=dtype)
+    c = np.zeros(n_control - 1, dtype=dtype)
+    d = np.zeros(n_control - 1, dtype=dtype)
 
     # store the spline coefficients
     for i in range(n_control - 1):
