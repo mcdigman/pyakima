@@ -120,11 +120,20 @@ def akima_create_helper(
         msg = 'x and y of different input precision is unsupported'
         raise TypeError(msg)
 
-    # calculate the difference
-    xdiffs = np.diff(x)
-    if not np.all(xdiffs > 0.0):
-        msg3 = 'x must be monotonically increasing'
-        raise ValueError(msg3)
+
+    # the numerically computed local slopes
+    m = np.zeros(n_control + 3, dtype=dtype)
+
+    for itrx in range(n_control-1):
+        # calculate the difference
+        diff_x = x[itrx + 1] - x[itrx]
+        if not diff_x > 0.0:
+            msg3 = 'x must be monotonically increasing'
+            raise ValueError(msg3)
+        diff_y = y[itrx + 1] - y[itrx]
+        m[2 + itrx] = diff_y / diff_x
+
+    #if not np.all(xdiffs > 0.0):
 
     # set boolean variables to control the loop behavior in each corner model case
     if corner_model == 0:
@@ -146,10 +155,6 @@ def akima_create_helper(
         msg4 = f'Unrecognized option for corner model {corner_model}'
         raise ValueError(msg4)
 
-    # the numerically computed local slopes
-    m = np.zeros(n_control + 3, dtype=dtype)
-
-    m[2 : n_control + 1] = np.diff(y) / xdiffs  # local slopes
 
     # natural boundary conditions
     m[0] = 3 * m[2] - 2 * m[3]

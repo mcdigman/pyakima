@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
+import argparse
 import sys
 from dataclasses import dataclass
 from importlib import import_module
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as package_version
 from pathlib import Path
 from statistics import median
 from time import perf_counter
 from typing import TYPE_CHECKING
 
+import numba
 import numpy as np
 
 PROJECT_ROOT = str(Path(__file__).resolve().parents[1])
@@ -71,6 +75,13 @@ class Timing:
     reason: str = ''
 
 
+@dataclass(frozen=True)
+class DemoOptions:
+    """Command-line options for the timing demo."""
+
+    show_overhead: bool
+
+
 MODELS = (
     ModelCase(
         label='gsl-style',
@@ -95,21 +106,42 @@ MODELS = (
 )
 
 
+def _installed_version(package_name: str) -> str | None:
+    try:
+        return package_version(package_name)
+    except PackageNotFoundError:
+        return None
+
+
 def _optional_import(module_name: str, label: str) -> OptionalModule:
     try:
         module = import_module(module_name)
     except ImportError as exc:
         return OptionalModule(label, None, f'skipped ({exc})')
+    root_name = module_name.split('.', maxsplit=1)[0]
     version = getattr(module, '__version__', None)
-    if version is None and '.' in module_name:
-        package = import_module(module_name.split('.', maxsplit=1)[0])
+    if version is None:
+        package = import_module(root_name)
         version = getattr(package, '__version__', None)
+    if version is None:
+        version = _installed_version(root_name)
     detail = f'available {version}' if version else 'available'
     return OptionalModule(label, module, detail)
 
 
 SCIPY = _optional_import('scipy.interpolate', 'scipy')
 PYGSL = _optional_import('pygsl_lite.spline', 'pygsl_lite')
+
+
+def _parse_args() -> DemoOptions:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        '--show-overhead',
+        action='store_true',
+        help='include Python dispatch/class evaluation columns; constructor overhead is always shown',
+    )
+    args = parser.parse_args()
+    return DemoOptions(show_overhead=args.show_overhead)
 
 
 def _control_points(n_control: int) -> tuple[np.ndarray, np.ndarray]:
@@ -146,8 +178,8 @@ def _pyakima_spline(
 def _pyakima_helper(x: np.ndarray, y: np.ndarray, model: ModelCase) -> object:
     # Match AkimaSpline's ownership behavior so helper vs class isolates object overhead.
     return akima_create_helper(
-        x.copy(),
-        y.copy(),
+        x,
+        y,
         corner_model=model.corner_model,
         denom_small_cut=model.denom_small_cut,
     )
@@ -296,6 +328,10 @@ def _print_availability() -> None:
     _print_table('Optional backend availability', ('backend', 'status'), rows)
 
 
+def _print_runtime_versions() -> None:
+    print(f'python {sys.version.split()[0]} | numba {numba.__version__} | numpy {np.__version__}')
+
+
 def _creation_rows() -> list[tuple[str, ...]]:
     rows: list[tuple[str, ...]] = []
     for model in MODELS:
@@ -320,7 +356,7 @@ def _creation_rows() -> list[tuple[str, ...]]:
     return rows
 
 
-def _scalar_rows() -> list[tuple[str, ...]]:
+def _scalar_rows(options: DemoOptions) -> list[tuple[str, ...]]:
     rows: list[tuple[str, ...]] = []
     x_scalars = _scalar_eval_points()
     for model in MODELS:
@@ -329,18 +365,23 @@ def _scalar_rows() -> list[tuple[str, ...]]:
             py_spline = _pyakima_spline(x, y, model)
             coeffs = py_spline.spline
 
-            class_time = _time_scalar_grid_required(
-                lambda x_scalar, py_spline=py_spline: py_spline(x_scalar),
-                x_scalars,
-            )
-            dispatch_time = _time_scalar_grid_required(
-                lambda x_scalar, coeffs=coeffs: cubic_call(x_scalar, coeffs, EXT),
-                x_scalars,
-            )
             scalar_time = _time_scalar_grid_required(
                 lambda x_scalar, coeffs=coeffs: cubic_call_scalar(x_scalar, coeffs, EXT),
                 x_scalars,
             )
+            pyakima_timings = [scalar_time]
+            overhead_cells: tuple[str, ...] = ()
+            if options.show_overhead:
+                class_time = _time_scalar_grid_required(
+                    lambda x_scalar, py_spline=py_spline: py_spline(x_scalar),
+                    x_scalars,
+                )
+                dispatch_time = _time_scalar_grid_required(
+                    lambda x_scalar, coeffs=coeffs: cubic_call(x_scalar, coeffs, EXT),
+                    x_scalars,
+                )
+                pyakima_timings.extend((class_time, dispatch_time))
+                overhead_cells = (_format_time(class_time), _format_time(dispatch_time))
 
             try:
                 alternate_name, alternate = _alternate_spline(model, x, y)
@@ -361,39 +402,26 @@ def _scalar_rows() -> list[tuple[str, ...]]:
                 (
                     model.label,
                     str(n_control),
-                    _format_time(class_time),
-                    _format_time(dispatch_time),
+                    *overhead_cells,
                     _format_time(scalar_time),
                     alternate_name,
                     _format_time(alternate_time),
-                    _format_speedup((class_time, dispatch_time, scalar_time), alternate_time),
+                    _format_speedup(pyakima_timings, alternate_time),
                 )
             )
     return rows
 
 
-def _vector_rows() -> list[tuple[str, ...]]:
+def _vector_rows(options: DemoOptions) -> list[tuple[str, ...]]:
     rows: list[tuple[str, ...]] = []
     for model in MODELS:
         for n_control in CONTROL_POINT_LENGTHS:
             x, y = _control_points(n_control)
             py_spline = _pyakima_spline(x, y, model)
-            py_spline_linear = _pyakima_spline(x, y, model, linear_vector_calls=1)
             coeffs = py_spline.spline
             for n_eval in VECTOR_CALL_LENGTHS:
                 x_eval = _eval_points(n_eval)
 
-                class_time = _time_required(lambda py_spline=py_spline, x_eval=x_eval: py_spline(x_eval))
-                class_linear_time = _time_required(
-                    lambda py_spline_linear=py_spline_linear, x_eval=x_eval: py_spline_linear(x_eval)
-                )
-                dispatch_time = _time_required(
-                    lambda x_eval=x_eval, coeffs=coeffs: cubic_call(
-                        x_eval,
-                        coeffs,
-                        EXT,
-                    )
-                )
                 vector_time = _time_required(
                     lambda x_eval=x_eval, coeffs=coeffs: cubic_call_vector(
                         x_eval,
@@ -408,6 +436,27 @@ def _vector_rows() -> list[tuple[str, ...]]:
                         EXT,
                     )
                 )
+                pyakima_timings = [vector_time, vector_linear_time]
+                overhead_cells: tuple[str, ...] = ()
+                if options.show_overhead:
+                    py_spline_linear = _pyakima_spline(x, y, model, linear_vector_calls=1)
+                    class_time = _time_required(lambda py_spline=py_spline, x_eval=x_eval: py_spline(x_eval))
+                    class_linear_time = _time_required(
+                        lambda py_spline_linear=py_spline_linear, x_eval=x_eval: py_spline_linear(x_eval)
+                    )
+                    dispatch_time = _time_required(
+                        lambda x_eval=x_eval, coeffs=coeffs: cubic_call(
+                            x_eval,
+                            coeffs,
+                            EXT,
+                        )
+                    )
+                    pyakima_timings.extend((class_time, class_linear_time, dispatch_time))
+                    overhead_cells = (
+                        _format_time(class_time),
+                        _format_time(class_linear_time),
+                        _format_time(dispatch_time),
+                    )
 
                 try:
                     alternate_name, alternate = _alternate_spline(model, x, y)
@@ -421,21 +470,12 @@ def _vector_rows() -> list[tuple[str, ...]]:
                         )
                     )
 
-                pyakima_timings = (
-                    class_time,
-                    class_linear_time,
-                    dispatch_time,
-                    vector_time,
-                    vector_linear_time,
-                )
                 rows.append(
                     (
                         model.label,
                         str(n_control),
                         str(n_eval),
-                        _format_time(class_time),
-                        _format_time(class_linear_time),
-                        _format_time(dispatch_time),
+                        *overhead_cells,
                         _format_time(vector_time),
                         _format_time(vector_linear_time),
                         alternate_name,
@@ -448,9 +488,16 @@ def _vector_rows() -> list[tuple[str, ...]]:
 
 def main() -> None:
     """Run the timing demo."""
+    options = _parse_args()
+    scalar_overhead_columns = ('class', 'cubic_call') if options.show_overhead else ()
+    vector_overhead_columns = ('class smart', 'class linear', 'cubic_call') if options.show_overhead else ()
+
     print('pyakima speed demo')
+    _print_runtime_versions()
     print(f'median of {REPEATS} repeats; each repeat is adaptively looped to at least {MIN_SECONDS:.3f} s')
     print('all pyakima jitted call paths are warmed once with matching arguments')
+    if not options.show_overhead:
+        print('evaluation tables hide Python dispatch/class overhead; pass --show-overhead to include it')
 
     _print_availability()
     _print_table(
@@ -459,7 +506,7 @@ def main() -> None:
             'model',
             'n_ctrl',
             'class',
-            'helper+copy',
+            'helper',
             'alt',
             'alt time',
             'best py speedup',
@@ -471,14 +518,13 @@ def main() -> None:
         (
             'model',
             'n_ctrl',
-            'class',
-            'cubic_call',
+            *scalar_overhead_columns,
             'scalar fn',
             'alt',
             'alt time',
             'best py speedup',
         ),
-        _scalar_rows(),
+        _scalar_rows(options),
     )
     _print_table(
         'Vector call time per call',
@@ -486,16 +532,14 @@ def main() -> None:
             'model',
             'n_ctrl',
             'n_eval',
-            'class smart',
-            'class linear',
-            'cubic_call',
+            *vector_overhead_columns,
             'vector fn',
             'linear fn',
             'alt',
             'alt time',
             'best py speedup',
         ),
-        _vector_rows(),
+        _vector_rows(options),
     )
 
 
