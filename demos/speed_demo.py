@@ -38,6 +38,8 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
     from types import ModuleType
 
+    import pygsl_lite.spline.akima
+
 CONTROL_POINT_LENGTHS = (5, 64, 4096)
 SCALAR_GRID_LENGTH = 257
 VECTOR_CALL_LENGTHS = (8, 1000, 10000, 100000)
@@ -230,7 +232,7 @@ def _alternate_spline(model: ModelCase, x: np.ndarray, y: np.ndarray) -> tuple[s
     return model.alternate, _scipy_spline(x, y, model.scipy_method)
 
 
-def _call_gsl_scalar(spline: object, xint: float) -> object:
+def _call_gsl_scalar(spline: pygsl_lite.spline.akima, xint: float) -> object:
     if hasattr(spline, 'eval'):
         return spline.eval(xint)
     if hasattr(spline, 'eval_e'):
@@ -239,7 +241,7 @@ def _call_gsl_scalar(spline: object, xint: float) -> object:
     raise AttributeError(msg)
 
 
-def _call_gsl_vector(spline: object, xint: np.ndarray) -> object:
+def _call_gsl_vector(spline: pygsl_lite.spline.akima, xint: np.ndarray) -> object:
     if not hasattr(spline, 'eval_vector'):
         msg = 'pygsl_lite spline has no eval_vector method'
         raise AttributeError(msg)

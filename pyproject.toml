@@ -66,7 +66,7 @@ reportMissingImports = "none"
 # Exclude dot-directories (e.g. the CI job's .venv) so pyright does not
 # type-check installed dependencies, the "build" copy the wheel build creates,
 # and demos/ (which needs scipy/matplotlib/pygsl_lite not installed in CI).
-exclude = ["**/node_modules", "**/__pycache__", "**/.*", "build", "demos"]
+exclude = ["**/node_modules", "**/__pycache__", "**/.*", "build"]
 
 [tool.mypy]
 # The mypy job in .github/workflows/typecheck.yml runs mypy without installing
@@ -75,6 +75,10 @@ exclude = ["**/node_modules", "**/__pycache__", "**/.*", "build", "demos"]
 # so that runs which DO have the deps installed (local/editor) still ignore it.
 # demos/ is excluded (it imports pygsl_lite, which has no types).
 strict = true
+
+[[tool.mypy.overrides]]
+module = ["pygsl_lite", "pygsl_lite.*"]
+ignore_missing_imports = true
 
 
 
