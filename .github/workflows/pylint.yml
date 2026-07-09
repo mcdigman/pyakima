@@ -29,7 +29,7 @@ jobs:
       # Install the project with its dev extra into a venv so pylint can resolve
       # the real numpy/numba imports (the runner's system Python is externally
       # managed, so --system installs are rejected). scipy and matplotlib are
-      # added so demos/step_demo.py imports resolve; the remaining demo backend
+      # added so pyakima/demos/step_demo.py imports resolve; the remaining demo backend
       # (pygsl_lite, a C extension needing system GSL) is not installable here and
       # is listed under ignored-modules in .pylintrc instead. pylint and the
       # pylint-per-file-ignores plugin (loaded via .pylintrc) go into the same
@@ -43,4 +43,4 @@ jobs:
       # pylint reads options (plugins, per-file-ignores, disables) from .pylintrc
       # in the repo root.
       - name: Run pylint
-        run: .venv/bin/pylint pyakima demos tests
+        run: .venv/bin/pylint pyakima tests

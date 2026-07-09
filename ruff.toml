@@ -58,7 +58,7 @@ min-file-size = 1024
 
 [lint.per-file-ignores]
 "tests/*" = ["S101", "D103"]
-"demos/*" = ["T201"]
+"pyakima/demos/*" = ["T201"]
 
 [lint.pydocstyle]
 convention = "numpy"

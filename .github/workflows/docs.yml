@@ -1,0 +1,39 @@
+name: Docs
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  html:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          python-version: "3.14"
+          cache-dependency-glob: "**/pyproject.toml"
+
+      # `uv run --extra docs` syncs the project (pulling numpy/numba so autodoc
+      # can import pyakima) plus the docs extra, then builds. -W turns warnings
+      # into errors so broken references or stale docstrings fail CI.
+      - name: Build HTML docs
+        run: >
+          uv run --extra docs
+          sphinx-build -W --keep-going -b html docs docs/_build/html
+
+      - name: Upload HTML docs
+        uses: actions/upload-artifact@v4
+        with:
+          name: html-docs
+          path: docs/_build/html
+          if-no-files-found: error

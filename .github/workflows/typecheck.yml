@@ -39,7 +39,7 @@ jobs:
       # so --system installs are rejected). This matches the pyright job and keeps
       # CI in step with local runs; strict mode's disallow-untyped-decorators only
       # stays quiet when numba/pytest resolve to real types rather than Any. scipy
-      # and matplotlib are added so demos/step_demo.py imports resolve; the other
+      # and matplotlib are added so pyakima/demos/step_demo.py imports resolve; the other
       # demo backend, pygsl_lite, is handled by the ignore_missing_imports
       # override in [tool.mypy] (pyproject.toml) since it is not installable here.
       - name: Install project with typed extras

@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  schedule:
+    # Weekly (Mon 06:00 UTC): re-run the full matrix so a newly released
+    # numpy/numba that breaks the floor or ceiling is caught even when no code
+    # has changed. numpy/numba compatibility is the fragile part of this package.
+    - cron: "0 6 * * 1"
 
 concurrency:
   group: test-${{ github.ref }}
@@ -15,6 +20,11 @@ env:
 
 jobs:
   pytest:
+    # Fast, current-Python gate on every push/PR. The full declared-support
+    # matrix (below) is heavier and runs only on PRs to main and the weekly cron,
+    # so routine commits are not slowed down. Skipped on the cron run because the
+    # matrix already covers 3.14 there.
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -36,5 +46,59 @@ jobs:
           uv pip install ".[dev]"
 
       # Run the test suite.
+      - name: Run tests
+        run: .venv/bin/python -m pytest
+
+  matrix:
+    # Declared-support gate: run the actual test suite across every supported
+    # Python (requires-python = ">=3.10"), including the dependency floor pair
+    # (3.10 + lowest-direct resolution -> numpy 1.22 / numba 0.56), the most
+    # compatibility-fragile combination. Heavier than the fast job, so it runs
+    # only on PRs targeting main (gating merges into main) and the weekly cron --
+    # not on every push. workflow_dispatch also triggers it for manual runs.
+    if: >-
+      github.event_name == 'schedule'
+      || github.event_name == 'workflow_dispatch'
+      || (github.event_name == 'pull_request' && github.base_ref == 'main')
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Dependency floor: oldest Python + lowest-direct resolution.
+          - python-version: "3.10"
+            resolution: lowest-direct
+          # Each supported Python against the latest resolvable numpy/numba.
+          - python-version: "3.10"
+            resolution: highest
+          - python-version: "3.11"
+            resolution: highest
+          - python-version: "3.12"
+            resolution: highest
+          - python-version: "3.13"
+            resolution: highest
+          - python-version: "3.14"
+            resolution: highest
+    name: py${{ matrix.python-version }} (${{ matrix.resolution }})
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          python-version: ${{ matrix.python-version }}
+          cache-dependency-glob: "**/pyproject.toml"
+
+      # Install the package (and its numpy/numba) at the matrix resolution, then
+      # add pytest separately so the test runner stays current instead of being
+      # floored too: pytest is not a runtime dependency, so pinning it to its own
+      # lower bound under --resolution lowest-direct would test nothing useful.
+      - name: Install project (${{ matrix.resolution }} resolution)
+        run: |
+          uv venv --python ${{ matrix.python-version }}
+          uv pip install --resolution ${{ matrix.resolution }} .
+          uv pip install pytest
+
       - name: Run tests
         run: .venv/bin/python -m pytest

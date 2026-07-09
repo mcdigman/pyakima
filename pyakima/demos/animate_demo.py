@@ -10,11 +10,10 @@ the three exported corner models -- ``non-rounded`` keeps the sharp kink while
 Two variants are written, ``akima_demo_light.gif`` and ``akima_demo_dark.gif``,
 so the README can serve each via a theme-aware ``<picture>`` element.
 
-Run from a source checkout (``demos/`` ships as an example, not an installed
-package)::
+Run from a source checkout::
 
     pip install -e '.[demos]'                 # scipy, matplotlib, pygsl_lite
-    python -m demos.animate_demo              # writes assets/akima_demo_*.gif
+    python -m pyakima.demos.animate_demo      # writes assets/akima_demo_*.gif
 
 Copyright 2026 Matthew C. Digman
 
@@ -35,7 +34,7 @@ from scipy.interpolate import CubicSpline
 
 from pyakima import AkimaSpline
 
-ASSETS = Path(__file__).resolve().parents[1] / 'assets'
+ASSETS = Path(__file__).resolve().parents[2] / 'assets'
 
 FRAMES = 45
 FPS = 15

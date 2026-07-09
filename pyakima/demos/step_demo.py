@@ -43,6 +43,6 @@ if __name__ == '__main__':
     ax.plot(xs, y_akima_gsl, label='gsl akima')
     ax.plot(xs, ys_expect, 'k--', label='true function', alpha=0.5)
     ax.set_xlabel('x')
-    ax.set_xlabel('y')
+    ax.set_ylabel('y')
     ax.legend()
     plt.show()
