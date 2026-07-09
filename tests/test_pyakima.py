@@ -639,6 +639,18 @@ def test_vector_loop_handles_below_and_above_range_after_initial_point(ext: int,
     _assert_same_float_values(spline(xint), expected, maxulp=0)
 
 
+def test_vector_forward_search_loop_exhaustion_preserves_nan_result() -> None:
+    x, y = _affine_control_points()
+    spline = AkimaSpline(x, y, ext=3)
+    # A leading nan reaches the forward search loop; every knot comparison is false.
+    xint = np.array([np.nan, 0.5])
+    expected = np.array([np.nan, 2.0])
+
+    _assert_same_float_values(cubic_call_vector(xint, spline.spline, 3), expected, maxulp=0)
+    _assert_same_float_values(cubic_call(xint, spline.spline, 3), expected, maxulp=0)
+    _assert_same_float_values(spline(xint), expected, maxulp=0)
+
+
 def test_invalid_extrapolation_mode_raises_for_all_call_paths() -> None:
     x, y = _affine_control_points()
     spline = AkimaSpline(x, y)
