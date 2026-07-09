@@ -4,6 +4,9 @@ dist/
 *.egg-info/
 *.egg
 *.swp
+.skylos/
+.coverage
+tach.toml
 
 # Byte-compiled / caches
 __pycache__/

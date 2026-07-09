@@ -34,13 +34,12 @@ dev = [
     "pyrefly",
     "prek",
 ]
-# Optional dependencies for the scripts under demos/. scipy and matplotlib are
-# pip-installable; pygsl_lite (used by speed_demo.py) is not reliably available
-# on PyPI, so it is intentionally left out and must be installed separately to
-# run that comparison.
+# Optional dependencies for the scripts under demos/. speed_demo.py skips
+# individual optional backends at runtime when an import is unavailable.
 demos = [
     "scipy",
     "matplotlib",
+    "pygsl_lite",
 ]
 
 [tool.pyrefly]

@@ -91,8 +91,6 @@ def akima_create_helper(
         if corner_model is unrecognized
         if input sizes do not match
         if x is not monotonically increasing
-    TypeError
-        if x and y are not the same dtype
 
     Notes
     -----
@@ -116,15 +114,24 @@ def akima_create_helper(
 
     # get the input precision
     dtype = x.dtype
-    if not y.dtype == dtype:  # noqa: SIM201
-        msg = 'x and y of different input precision is unsupported'
-        raise TypeError(msg)
 
-    # calculate the difference
-    xdiffs = np.diff(x)
-    if not np.all(xdiffs > 0.0):
-        msg3 = 'x must be monotonically increasing'
-        raise ValueError(msg3)
+    # the numerically computed local slopes
+    m = np.zeros(n_control + 3, dtype=dtype)
+
+    for itrx in range(n_control - 1):
+        # calculate the difference
+        diff_x = x[itrx + 1] - x[itrx]
+        if not diff_x > 0.0:
+            msg3 = 'x must be monotonically increasing'
+            raise ValueError(msg3)
+        diff_y = y[itrx + 1] - y[itrx]
+        m[2 + itrx] = diff_y / diff_x
+
+    # natural boundary conditions
+    m[0] = 3 * m[2] - 2 * m[3]
+    m[1] = 2 * m[2] - m[3]
+    m[n_control + 1] = 2 * m[n_control] - m[n_control - 1]
+    m[n_control + 2] = 3 * m[n_control] - 2 * m[n_control - 1]
 
     # set boolean variables to control the loop behavior in each corner model case
     if corner_model == 0:
@@ -145,17 +152,6 @@ def akima_create_helper(
     else:
         msg4 = f'Unrecognized option for corner model {corner_model}'
         raise ValueError(msg4)
-
-    # the numerically computed local slopes
-    m = np.zeros(n_control + 3, dtype=dtype)
-
-    m[2 : n_control + 1] = np.diff(y) / xdiffs  # local slopes
-
-    # natural boundary conditions
-    m[0] = 3 * m[2] - 2 * m[3]
-    m[1] = 2 * m[2] - m[3]
-    m[n_control + 1] = 2 * m[n_control] - m[n_control - 1]
-    m[n_control + 2] = 3 * m[n_control] - 2 * m[n_control - 1]
 
     t_left = np.zeros(n_control, dtype=dtype)  # left sided slopes
     t_right = np.zeros(
@@ -284,7 +280,8 @@ def cubic_call_scalar(xint: float, spline: SplineCoeffs, ext: int) -> float:
     """
     Call cubic spline with a scalar.
 
-    Linearly searches through control points; more intelligent searches are possible, see e.g. cubic_call_vector
+    Searches the control points with a binary search;
+    more intelligent searches are possible, see e.g. cubic_call_vector
 
     Parameters
     ----------
@@ -303,7 +300,7 @@ def cubic_call_scalar(xint: float, spline: SplineCoeffs, ext: int) -> float:
     Raises
     ------
     ValueError
-        if the extrapolation option is unrecognized.
+        if the extrapolation method is unrecognized.
     """
     n_control = spline.n_control
 
@@ -329,13 +326,14 @@ def cubic_call_scalar(xint: float, spline: SplineCoeffs, ext: int) -> float:
         return y_bound_low
     if xint > spline.x[-1] and ext != 0:
         return y_bound_high
-    # find the proper subspline
-    for i in range(n_control - 2):
-        if xint < spline.x[i + 1]:
-            return spline_single_knot_eval(xint, spline, i)
+    if xint == spline.x[-1]:
+        return spline.y[-1]
 
-    # always evaluate using last iteration if we get here
-    return spline_single_knot_eval(xint, spline, n_control - 2)
+    # find the proper subspline
+    # locate the enclosing subspline directly with a binary search
+    i = int(np.searchsorted(spline.x[: n_control - 1], xint, side='right') - 1)
+    i = max(i, 0)  # only reachable when ext == 0 and xint is below the first control point
+    return spline_single_knot_eval(xint, spline, i)
 
 
 @njit()
@@ -399,16 +397,11 @@ def cubic_call_vector(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int
     dtype = xint.dtype
     res = np.zeros(xint.size, dtype=dtype)
 
-    # handle the initial value
-    last_idx: int = int(np.searchsorted(spline.x[: n_control - 1], xint[0], side='right') - 1)
-    if last_idx > n_control - 2:
-        last_idx = n_control - 2  # should be unreachable from the searchsorted, but left as defensive
-    elif last_idx < 0:
-        last_idx = 0
-    res[0] = cubic_call_scalar(xint[0], spline, ext)
+    # the first iteration has no previous result to use as a location guess, so start the search at the beginning
+    last_idx: int = 0
 
-    # find the proper subspline for later iterations using previous results as a guess for the location
-    for j in range(1, xint.size):
+    # find the proper subspline using previous results as a guess for the location
+    for j in range(xint.size):
         # by using fact that input xint will generally be sorted
         # we can use successive starting guesses to accelerate finding the nearest spline points
         # this speedup will get larger if there is more points; if less it might be better to do a linear search
@@ -420,6 +413,11 @@ def cubic_call_vector(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int
             last_idx = 0
             continue
 
+        if x_loc == spline.x[n_control - 1]:
+            res[j] = spline.y[n_control - 1]
+            last_idx = n_control - 2
+            continue
+
         if x_loc >= spline.x[n_control - 2]:
             if x_loc <= spline.x[n_control - 1] or ext == 0:
                 res[j] = spline_single_knot_eval(x_loc, spline, n_control - 2)
@@ -429,18 +427,22 @@ def cubic_call_vector(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int
                 last_idx = n_control - 2
             continue
 
-        if x_loc > xint[j - 1]:
-            if x_loc < spline.x[last_idx + 1]:
-                i = last_idx
-            else:
-                i = int(np.searchsorted(spline.x[last_idx : n_control - 1], x_loc, side='right') - 1 + last_idx)
-            last_idx = i
+        if j == 0 or x_loc > xint[j - 1]:
+            i = n_control - 2
+            for i_test in range(last_idx, n_control - 1):
+                if x_loc < spline.x[i_test + 1]:
+                    i = i_test
+                    break
         elif x_loc >= spline.x[last_idx]:
             i = last_idx
         elif x_loc <= spline.x[0]:
             i = 0
         else:
-            i = int(np.searchsorted(spline.x[:last_idx], x_loc, side='right') - 1)
+            i = 0
+            for i_test in range(last_idx - 1, 0, -1):
+                if x_loc >= spline.x[i_test]:
+                    i = i_test
+                    break
 
         last_idx = i
 
@@ -501,7 +503,7 @@ def cubic_call(xint: float | NDArray[np.floating], spline: SplineCoeffs, ext: in
 
 
 @numba.extending.overload(cubic_call)
-def _select_cubic_call(xint, spline, ext):  # noqa: ANN001, ANN202 # type: ignore[implicit-any-parameter]
+def _select_cubic_call(xint, spline, ext):  # noqa: ANN001, ANN202 # type: ignore[implicit-any-parameter] # skylos: ignore[SKY-U002]
     if not isinstance(ext, numba.core.types.Integer):
         msg1 = 'Unsuported type of input: ' + str(type(ext))
         raise TypeError(msg1)
@@ -525,11 +527,13 @@ def _select_cubic_call(xint, spline, ext):  # noqa: ANN001, ANN202 # type: ignor
 @njit()
 def cubic_call_vector_linear(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int) -> NDArray[np.floating]:
     """
-    Evaluate akima splines with a scalar input.
+    Evaluate akima splines with a vector input using independent loop iterations.
 
-    Helper similar to cubic_call_vector (see more discussion there), but make loop iterations uncorrelated.
-    This method may be faster if xint not at least partially sorted
-    or on some compute architectures (this method is more readily parallelizable)
+    Produces the same result as cubic_call_vector, but inlines the per-point logic of
+    cubic_call_scalar so the ext parsing is done once up front rather than on every iteration
+    (as cubic_call_vector also does). Loop iterations remain uncorrelated (no shared location
+    guess), so this may be faster when xint is not at least partially sorted or on some compute
+    architectures (this method is more readily parallelizable).
 
     Parameters
     ----------
@@ -544,13 +548,55 @@ def cubic_call_vector_linear(xint: NDArray[np.floating], spline: SplineCoeffs, e
     -------
     NDArray[np.floating]
         array of the same size as xint containing interpolated y values.
+
+    Raises
+    ------
+    ValueError
+        if the extrapolation method is unrecognized.
     """
+    n_control = spline.n_control
+
+    # boundary value handling, parsed once outside the loop
+    if ext == 0:
+        y_bound_low = np.nan
+        y_bound_high = np.nan
+    elif ext == 1:
+        y_bound_low = 0.0
+        y_bound_high = 0.0
+    elif ext == 3:
+        y_bound_low = spline.y[0]
+        y_bound_high = spline.y[-1]
+    elif ext == 4:
+        y_bound_low = np.nan
+        y_bound_high = np.nan
+    else:
+        msg = f'Unrecognized option for extrapolation: {ext}'
+        raise ValueError(msg)
+
     dtype = xint.dtype
     res = np.zeros(xint.size, dtype=dtype)
-    # iterate over every input point
+
+    # iterate over every input point; iterations are independent (no shared location guess)
     for j in range(xint.size):
-        # let cubic_call_scalar handle finding the correct subspline and evaluating
-        res[j] = cubic_call_scalar(xint[j], spline, ext)
+        x_loc = xint[j]
+
+        # for constant boundary value handling
+        if x_loc < spline.x[0] and ext != 0:
+            res[j] = y_bound_low
+            continue
+        if x_loc > spline.x[-1] and ext != 0:
+            res[j] = y_bound_high
+            continue
+
+        if x_loc == spline.x[n_control - 1]:
+            res[j] = spline.y[n_control - 1]
+            continue
+
+        # locate the enclosing subspline directly with a binary search
+        i = np.searchsorted(spline.x[: n_control - 1], x_loc, side='right') - 1
+        i = max(i, 0)  # only reachable when ext == 0 and x_loc is below the first control point
+        res[j] = spline_single_knot_eval(x_loc, spline, i)
+
     return res
 
 
