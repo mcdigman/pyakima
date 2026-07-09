@@ -9,9 +9,7 @@ Expose the public building blocks of the :mod:`pyakima.pyakima` module: the
 numba-compiled code.
 """
 
-from importlib.metadata import PackageNotFoundError
-from importlib.metadata import version as _version
-
+from pyakima._version import __version__
 from pyakima.pyakima import (
     AkimaSpline,
     SplineCoeffs,
@@ -22,11 +20,6 @@ from pyakima.pyakima import (
     cubic_call_vector_linear,
     spline_single_knot_eval,
 )
-
-try:
-    __version__ = _version('pyakima')
-except PackageNotFoundError:  # pragma: no cover - running from an uninstalled source tree
-    __version__ = '0.0.0+unknown'
 
 __all__ = [
     'AkimaSpline',
