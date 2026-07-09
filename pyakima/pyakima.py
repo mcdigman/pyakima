@@ -149,7 +149,7 @@ def akima_create_helper(
         sharp_corners = False
         # denom_small_cut should be zero to match makima
     else:
-        msg4 = f'Unrecognized option for corner model {corner_model}'
+        msg4 = 'Unrecognized option for corner model'
         raise ValueError(msg4)
 
     t_left = np.zeros(n_control, dtype=dtype)  # left sided slopes
@@ -318,7 +318,7 @@ def cubic_call_scalar(xint: float, spline: SplineCoeffs, ext: int) -> float:
         y_bound_low = np.nan
         y_bound_high = np.nan
     else:
-        msg = f'Unrecognized option for extrapolation: {ext}'
+        msg = 'Unrecognized option for extrapolation'
         raise ValueError(msg)
 
     # for constant boundary value handling
@@ -391,7 +391,7 @@ def cubic_call_vector(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int
         y_bound_low = np.nan
         y_bound_high = np.nan
     else:
-        msg = f'Unrecognized option for extrapolation: {ext}'
+        msg = 'Unrecognized option for extrapolation'
         raise ValueError(msg)
 
     dtype = xint.dtype
@@ -576,7 +576,7 @@ def cubic_call_vector_linear(xint: NDArray[np.floating], spline: SplineCoeffs, e
         y_bound_low = np.nan
         y_bound_high = np.nan
     else:
-        msg = f'Unrecognized option for extrapolation: {ext}'
+        msg = 'Unrecognized option for extrapolation'
         raise ValueError(msg)
 
     dtype = xint.dtype
@@ -661,7 +661,7 @@ class AkimaSpline:
         elif corner_model in {'makima', 2}:
             self.corner_model = 2
         else:
-            msg2 = f'Unrecognized option for corner model: {corner_model}'
+            msg2 = 'Unrecognized option for corner model'
             raise ValueError(msg2)
 
         # default values for the denominator cutoff depend on the method
