@@ -17,4 +17,4 @@ per-file-ignores =
   tests/*:missing-function-docstring
 
 # line length etc better handled by ruff
-disable = line-too-long, too-many-locals, too-many-branches, too-many-statements, too-many-arguments, too-few-public-methods, too-many-positional-arguments
+disable = line-too-long, too-many-locals, too-many-branches, too-many-statements, too-many-arguments, too-few-public-methods, too-many-positional-arguments, wrong-import-position
