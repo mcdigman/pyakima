@@ -39,6 +39,19 @@ three corner models `pyakima` exports:
    Less overshoot than `akima`, while mathematical guaranteed to preserve differentiability/continuous behavior at corners without special edge case handling.
    Similar performance to `akima` in most cases.
 
+## Table of Contents
+
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Jitted Use](#jitted-use)
+- [Spline Options](#spline-options)
+- [Regenerating the Demo](#regenerating-the-demo)
+- [Performance Snapshot](#performance-snapshot)
+- [Quality Gates](#quality-gates)
+- [Contributing](#contributing)
+- [License](#license)
+- [Footnotes](#footnotes)
+
 ## Installation
 
 ```bash
