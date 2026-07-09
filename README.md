@@ -2,7 +2,10 @@
 
 Pure Python Implementation of Akima Splines
 
-![Two-panel animation. Top: as one control point slides up and down, the pyakima makima curve hugs the data while a natural cubic spline rings above and below the spike. Bottom: a zoom on a sharp kink where the non-rounded, akima, and makima corner models round the corner by differing amounts.](assets/akima_demo.gif)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/akima_demo_dark.gif">
+  <img alt="Two-panel animation. Top: as one control point slides up and down, the pyakima makima curve hugs the data while a natural cubic spline rings above and below the spike. Bottom: a zoom on a sharp kink where the non-rounded, akima, and makima corner models round the corner by differing amounts." src="assets/akima_demo_light.gif">
+</picture>
 
 The top panel slides one control point up and down: the pyakima `makima` fit
 stays local and flat on either side of the spike, while a natural cubic spline
@@ -17,5 +20,5 @@ source checkout:
 
 ```bash
 pip install -e '.[demos]'         # scipy, matplotlib, pygsl_lite
-python -m demos.animate_demo      # writes assets/akima_demo.gif
+python -m demos.animate_demo      # writes assets/akima_demo_{light,dark}.gif
 ```
