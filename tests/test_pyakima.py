@@ -1,6 +1,7 @@
-"""Tests for the public pyakima spline helpers."""
+"""Tests for the public pyakima spline helpers.
 
-# ruff: noqa: D103
+Copyright 2026 Matthew C. Digman
+"""
 
 from __future__ import annotations
 
@@ -69,7 +70,7 @@ def _assert_coefficients_equal(actual: SplineCoeffs, expected: SplineCoeffs, *, 
 
 def _single_knot_derivative(xint: float, spline: SplineCoeffs, i: int) -> float:
     dx = xint - spline.x[i]
-    return spline.b[i] + 2.0 * spline.c[i] * dx + 3.0 * spline.d[i] * dx**2
+    return float(spline.b[i] + 2.0 * spline.c[i] * dx + 3.0 * spline.d[i] * dx**2)
 
 
 def _outside_interval_mask(size: int, first: int, last: int) -> np.ndarray:
@@ -685,10 +686,10 @@ def test_cubic_call_rejects_non_float_scalar_and_non_array_inputs() -> None:
     spline = AkimaSpline(x, y)
 
     with pytest.raises(TypeError):
-        cubic_call(1, spline.spline, 3)  # type: ignore[arg-type]
+        cubic_call(1, spline.spline, 3)
 
     with pytest.raises(TypeError):
-        cubic_call([0.5, 1.5], spline.spline, 3)  # type: ignore[arg-type, call-overload]
+        cubic_call([0.5, 1.5], spline.spline, 3)  # type: ignore[call-overload]
 
     with pytest.raises(TypeError):
         spline(1)
@@ -700,7 +701,7 @@ def test_numba_overload_rejects_non_integer_ext_type() -> None:
 
     @njit()
     def call_with_float_ext(xint: float, spline_coeffs: SplineCoeffs) -> float:
-        return cubic_call(xint, spline_coeffs, 3.0)  # type: ignore[arg-type, call-overload]
+        return cubic_call(xint, spline_coeffs, 3.0)  # type: ignore[call-overload, no-any-return]
 
     with pytest.raises(TypeError, match='Unsuported type of input'):
         call_with_float_ext(0.5, spline.spline)
@@ -709,7 +710,7 @@ def test_numba_overload_rejects_non_integer_ext_type() -> None:
 def test_numba_overload_rejects_non_spline_type() -> None:
     @njit()
     def call_with_float_spline(xint: float) -> float:
-        return cubic_call(xint, 1.0, 3)  # type: ignore[arg-type, call-overload]
+        return cubic_call(xint, 1.0, 3)  # type: ignore[call-overload, no-any-return]
 
     with pytest.raises(TypeError, match='Unsuported type of input'):
         call_with_float_spline(0.5)
@@ -721,7 +722,7 @@ def test_numba_overload_rejects_unsupported_xint_type() -> None:
 
     @njit()
     def call_with_integer_xint(spline_coeffs: SplineCoeffs) -> float:
-        return cubic_call(1, spline_coeffs, 3)  # type: ignore[arg-type]
+        return cubic_call(1, spline_coeffs, 3)
 
     with pytest.raises(TypeError, match='Unsuported type of input'):
         call_with_integer_xint(spline.spline)
@@ -772,8 +773,8 @@ def test_integer_control_arrays_are_accepted_without_integer_output_dtype_guaran
     y = 2 * x + 1
     xint = np.array([0.0, 0.5, 2.5, 4.0])
 
-    helper_spline = akima_create_helper(x, y)  # type: ignore[bad-argument-type, arg-type]
-    object_spline = AkimaSpline(x, y, ext=0)  # type: ignore[bad-argument-type, arg-type]
+    helper_spline = akima_create_helper(x, y)  # type: ignore[arg-type]
+    object_spline = AkimaSpline(x, y, ext=0)  # type: ignore[arg-type]
 
     np.testing.assert_array_equal(helper_spline.b, np.full(x.size - 1, 2.0))
     np.testing.assert_array_equal(helper_spline.c, np.zeros(x.size - 1))
@@ -872,8 +873,8 @@ def test_overflowing_control_value_differences_are_confined_to_strict_coefficien
 
     changed = y.copy()
     changed_index = 7
-    changed[changed_index] = np.finfo(dtype).max
-    changed[changed_index + 1] = -np.finfo(dtype).max
+    changed[changed_index] = np.finfo(dtype).max  # pylint: disable=no-member
+    changed[changed_index + 1] = -np.finfo(dtype).max  # pylint: disable=no-member
     overflowed = akima_create_helper(x, changed)
 
     _assert_component_unchanged_outside_interval(baseline, overflowed, 'a', changed_index, changed_index + 1)
@@ -896,7 +897,7 @@ def test_overflowing_control_value_differences_are_confined_to_strict_coefficien
 
 def test_finite_control_values_with_nonfinite_differences_produce_local_nan_coefficients() -> None:
     x = np.arange(8, dtype=np.float64)
-    finite_max = np.finfo(np.float64).max
+    finite_max = np.finfo(np.float64).max  # pylint: disable=no-member
     y = np.array([0.0, finite_max, -finite_max, 0.0, 1.0, 2.0, 3.0, 4.0])
 
     spline = akima_create_helper(x, y)

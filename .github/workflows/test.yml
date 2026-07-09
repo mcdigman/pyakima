@@ -35,17 +35,6 @@ jobs:
           uv venv
           uv pip install ".[dev]"
 
-      # Placeholder: there are no tests in tests/ yet. pytest exits with code 5
-      # ("no tests collected"), which we treat as a pass so this workflow is
-      # ready to go green the moment the first test lands. Remove the special
-      # casing once tests exist.
+      # Run the test suite.
       - name: Run tests
-        run: |
-          set +e
-          .venv/bin/python -m pytest
-          status=$?
-          if [ "$status" -eq 5 ]; then
-            echo "::warning::No tests collected yet -- test workflow is a placeholder."
-            exit 0
-          fi
-          exit "$status"
+        run: .venv/bin/python -m pytest

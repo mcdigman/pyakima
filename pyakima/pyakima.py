@@ -1,6 +1,6 @@
 """Python Akima Spline Implementation.
 
-Copyright Matthew Digman 2025
+Copyright 2026 Matthew C. Digman
 
 objects defined:
 
@@ -13,7 +13,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, NamedTuple, overload
 
-import numba
 import numba.core.types
 import numba.extending
 import numpy as np
@@ -243,11 +242,11 @@ def akima_create_helper(
 @overload
 def spline_single_knot_eval(xint: float | np.floating, spline: SplineCoeffs, i: int) -> float: ...
 @overload
-def spline_single_knot_eval(xint: NDArray[np.floating], spline: SplineCoeffs, i: int) -> NDArray[np.floating]: ...  # type: ignore[overload-cannot-match]
+def spline_single_knot_eval(xint: NDArray[np.floating], spline: SplineCoeffs, i: int) -> NDArray[np.floating]: ...
 @njit()
 def spline_single_knot_eval(
     xint: float | np.floating | NDArray[np.floating], spline: SplineCoeffs, i: int
-) -> float | NDArray[np.floating]:
+) -> float | np.floating | NDArray[np.floating]:
     """
     Evaluate the spline from the values at the knot point with index i.
 
@@ -264,15 +263,16 @@ def spline_single_knot_eval(
 
     Returns
     -------
-    float | NDArray[np.floating]
+    float | np.floating | NDArray[np.floating]
         evaluated points of the same shape as xint; preserves input type for array inputs but scalars are cast to float
     """
-    return (
+    result: float | np.floating | NDArray[np.floating] = (
         spline.a[i]
         + spline.b[i] * (xint - spline.x[i])
         + spline.c[i] * (xint - spline.x[i]) ** 2
         + spline.d[i] * (xint - spline.x[i]) ** 3
     )
+    return result
 
 
 @njit()
@@ -327,7 +327,7 @@ def cubic_call_scalar(xint: float, spline: SplineCoeffs, ext: int) -> float:
     if xint > spline.x[-1] and ext != 0:
         return y_bound_high
     if xint == spline.x[-1]:
-        return spline.y[-1]
+        return float(spline.y[-1])
 
     # find the proper subspline
     # locate the enclosing subspline directly with a binary search
@@ -493,6 +493,12 @@ def cubic_call(xint: float | NDArray[np.floating], spline: SplineCoeffs, ext: in
     TypeError
         if the type of xint is unsupported.
     """
+    if not isinstance(ext, int):
+        msg1 = 'Unsuported type of input: ' + str(type(ext))
+        raise TypeError(msg1)
+    if not isinstance(spline, SplineCoeffs):
+        msg2 = 'Unsuported type of input: ' + str(type(spline))
+        raise TypeError(msg2)
     # implement in the select function
     if isinstance(xint, np.ndarray):
         return cubic_call_vector(xint, spline, ext)
@@ -503,7 +509,7 @@ def cubic_call(xint: float | NDArray[np.floating], spline: SplineCoeffs, ext: in
 
 
 @numba.extending.overload(cubic_call)
-def _select_cubic_call(xint, spline, ext):  # noqa: ANN001, ANN202 # type: ignore[implicit-any-parameter] # skylos: ignore[SKY-U002]
+def _select_cubic_call(xint, spline, ext):  # type: ignore[no-untyped-def] # noqa: ANN001, ANN202 # skylos: ignore[SKY-U002]
     if not isinstance(ext, numba.core.types.Integer):
         msg1 = 'Unsuported type of input: ' + str(type(ext))
         raise TypeError(msg1)
@@ -512,11 +518,11 @@ def _select_cubic_call(xint, spline, ext):  # noqa: ANN001, ANN202 # type: ignor
         raise TypeError(msg2)
     if isinstance(xint, numba.core.types.Float):
 
-        def temp(xint, spline, ext):  # noqa: ANN001, ANN202 # type: ignore[reportRedeclaration]
+        def temp(xint, spline, ext):  # type: ignore[no-untyped-def] # noqa: ANN001, ANN202
             return cubic_call_scalar(xint, spline, ext)
     elif isinstance(xint, numba.core.types.Array):
 
-        def temp(xint, spline, ext):  # noqa: ANN001, ANN202 # type: ignore[reportRedeclaration]
+        def temp(xint, spline, ext):  # type: ignore[no-untyped-def] # noqa: ANN001, ANN202
             return cubic_call_vector(xint, spline, ext)
     else:
         msg3 = 'Unsuported type of input: ' + str(type(xint))
@@ -639,7 +645,7 @@ class AkimaSpline:
         linear_vector_calls: int = 0,
     ) -> None:
         # record the inputs
-        if linear_vector_calls not in (0, 1):
+        if linear_vector_calls not in {0, 1}:
             msg1 = 'linear_vector_calls must be in (0, 1)'
             raise ValueError(msg1)
 
@@ -648,11 +654,11 @@ class AkimaSpline:
         self.linear_vector_calls: int = linear_vector_calls
 
         # parse the input corner model
-        if corner_model in ('non-rounded', 0):
+        if corner_model in {'non-rounded', 0}:
             self.corner_model: int = 0
-        elif corner_model in ('akima', 1):
+        elif corner_model in {'akima', 1}:
             self.corner_model = 1
-        elif corner_model in ('makima', 2):
+        elif corner_model in {'makima', 2}:
             self.corner_model = 2
         else:
             msg2 = f'Unrecognized option for corner model: {corner_model}'

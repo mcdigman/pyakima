@@ -40,7 +40,7 @@ target-version = "py310"
 # McCabe complexity (`C901`) by default.
 #select = ["E", "F", "W", "PERF", "FLY", "TC", "C4", "DTZ", "T10", "DJ", "EM", "FA", "INT", "ISC", "ICN", "LOG", "G", "INP", "PIE", "RSE", "SLOT", "TID", "ARG", "PTH", "I", "W", "D210", "D403", "D202", "D209", "PGH", "PLC", "PLE", "PLW", "FURB", "RUF", "TRY", "A", "B", "BLE", "ASYNC", "YTT", "FAST", "AIR", "S", "PT", "SIM", "PD", "Q", "SLF", "FBT", "RET", "COM", "NPY", "ANN"]
 select = ["ALL"]
-ignore = ["SIM108", "DOC202", "COM812", "PLC0414", "PLR2004", "C901", "PLR0912", "PLR0913", "PLR0915"]
+ignore = ["SIM108", "DOC202", "COM812", "PLC0414", "PLR2004", "C901", "PLR0912", "PLR0913", "PLR0915", "RUF069", "PLR0914", "PLR0917"]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
 fixable = ["ALL"]
@@ -57,7 +57,7 @@ author = "Matthew C. Digman"
 min-file-size = 1024
 
 [lint.per-file-ignores]
-"tests/*" = ["S101"]
+"tests/*" = ["S101", "D103"]
 "demos/*" = ["T201"]
 
 [lint.pydocstyle]

@@ -1,0 +1,46 @@
+name: Pylint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: pylint-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.14"
+
+jobs:
+  pylint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache-dependency-glob: "**/pyproject.toml"
+
+      # Install the project with its dev extra into a venv so pylint can resolve
+      # the real numpy/numba imports (the runner's system Python is externally
+      # managed, so --system installs are rejected). scipy and matplotlib are
+      # added so demos/step_demo.py imports resolve; the remaining demo backend
+      # (pygsl_lite, a C extension needing system GSL) is not installable here and
+      # is listed under ignored-modules in .pylintrc instead. pylint and the
+      # pylint-per-file-ignores plugin (loaded via .pylintrc) go into the same
+      # venv; left unpinned like the other uvx-based checks so CI tracks the
+      # current releases.
+      - name: Install project with lint extras
+        run: |
+          uv venv
+          uv pip install ".[dev]" scipy matplotlib pylint pylint-per-file-ignores
+
+      # pylint reads options (plugins, per-file-ignores, disables) from .pylintrc
+      # in the repo root.
+      - name: Run pylint
+        run: .venv/bin/pylint pyakima demos tests
