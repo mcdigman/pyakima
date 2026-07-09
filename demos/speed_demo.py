@@ -6,6 +6,7 @@ Copyright 2026 Matthew C. Digman
 from __future__ import annotations
 
 import argparse
+import functools
 import sys
 from dataclasses import dataclass
 from importlib import import_module
@@ -15,7 +16,6 @@ from pathlib import Path
 from statistics import median
 from time import perf_counter
 from typing import TYPE_CHECKING
-import functools
 
 import numba
 import numpy as np
@@ -343,7 +343,7 @@ def _vector_jit_inner_loops(n_eval: int) -> int:
 
 def _time_vector_jit_loop_required(x_eval: np.ndarray, spline: SplineCoeffs) -> Timing:
     inner_loops = _vector_jit_inner_loops(x_eval.size)
-    timing = _time_required(lambda: _cubic_call_vector_loop_jit(x_eval, spline, inner_loops))
+    timing = _time_required(functools.partial(_cubic_call_vector_loop_jit, x_eval, spline, inner_loops))
     if timing.seconds is None:
         msg = 'required jitted vector-loop timing unexpectedly failed'
         raise RuntimeError(msg)
@@ -412,7 +412,7 @@ def _creation_rows() -> list[tuple[str, ...]]:
             class_time = _time_required(functools.partial(_pyakima_spline, x, y, model))
             helper_time = _time_required(functools.partial(_pyakima_helper, x, y, model))
 
-            alternate_time = _time_optional(lambda model=model, x=x, y=y: _alternate_spline(model, x, y)[1])
+            alternate_time = _time_optional(functools.partial(_alternate_spline, model, x, y))
             rows.append(
                 (
                     model.label,
@@ -435,20 +435,20 @@ def _scalar_rows(options: DemoOptions) -> list[tuple[str, ...]]:
             py_spline = _pyakima_spline(x, y, model)
             coeffs = py_spline.spline
 
+            def _call_scalar(coeffs: SplineCoeffs, xint: float) -> float:
+                return cubic_call(xint, coeffs, EXT)
+
             scalar_time = _time_scalar_grid_required(
-                lambda x_scalar, coeffs=coeffs: cubic_call_scalar(x_scalar, coeffs, EXT),
+                functools.partial(_call_scalar, coeffs),
                 x_scalars,
             )
             scalar_jit_time = _time_scalar_jit_grid_required(x_scalars, coeffs)
             pyakima_timings = [scalar_time]
             overhead_cells: tuple[str, ...] = ()
             if options.show_overhead:
-                class_time = _time_scalar_grid_required(
-                    lambda x_scalar, py_spline=py_spline: py_spline(x_scalar),
-                    x_scalars,
-                )
+                class_time = _time_scalar_grid_required(py_spline, x_scalars)
                 dispatch_time = _time_scalar_grid_required(
-                    lambda x_scalar, coeffs=coeffs: cubic_call(x_scalar, coeffs, EXT),
+                    functools.partial(_call_scalar, coeffs),
                     x_scalars,
                 )
                 pyakima_timings.extend((class_time, dispatch_time))
@@ -460,11 +460,7 @@ def _scalar_rows(options: DemoOptions) -> list[tuple[str, ...]]:
                 alternate_time = Timing(None, reason=f'{type(exc).__name__}: {exc}')
             else:
                 alternate_time = _time_scalar_grid_optional(
-                    lambda x_scalar, alternate=alternate, model=model: _call_alternate(
-                        alternate,
-                        model,
-                        x_scalar,
-                    ),
+                    functools.partial(_call_alternate, alternate, model),
                     x_scalars,
                 )
 
@@ -493,36 +489,16 @@ def _vector_rows(options: DemoOptions) -> list[tuple[str, ...]]:
             for n_eval in VECTOR_CALL_LENGTHS:
                 x_eval = _eval_points(n_eval)
 
-                vector_time = _time_required(
-                    lambda x_eval=x_eval, coeffs=coeffs: cubic_call_vector(
-                        x_eval,
-                        coeffs,
-                        EXT,
-                    )
-                )
-                vector_linear_time = _time_required(
-                    lambda x_eval=x_eval, coeffs=coeffs: cubic_call_vector_linear(
-                        x_eval,
-                        coeffs,
-                        EXT,
-                    )
-                )
+                vector_time = _time_required(functools.partial(cubic_call_vector, x_eval, coeffs, EXT))
+                vector_linear_time = _time_required(functools.partial(cubic_call_vector_linear, x_eval, coeffs, EXT))
                 vector_jit_time = _time_vector_jit_loop_required(x_eval, coeffs)
                 pyakima_timings = [vector_time, vector_linear_time]
                 overhead_cells: tuple[str, ...] = ()
                 if options.show_overhead:
                     py_spline_linear = _pyakima_spline(x, y, model, linear_vector_calls=1)
-                    class_time = _time_required(lambda py_spline=py_spline, x_eval=x_eval: py_spline(x_eval))
-                    class_linear_time = _time_required(
-                        lambda py_spline_linear=py_spline_linear, x_eval=x_eval: py_spline_linear(x_eval)
-                    )
-                    dispatch_time = _time_required(
-                        lambda x_eval=x_eval, coeffs=coeffs: cubic_call(
-                            x_eval,
-                            coeffs,
-                            EXT,
-                        )
-                    )
+                    class_time = _time_required(functools.partial(py_spline, x_eval))
+                    class_linear_time = _time_required(functools.partial(py_spline_linear, x_eval))
+                    dispatch_time = _time_required(functools.partial(cubic_call, x_eval, coeffs, EXT))
                     pyakima_timings.extend((class_time, class_linear_time, dispatch_time))
                     overhead_cells = (
                         _format_time(class_time),
@@ -535,11 +511,7 @@ def _vector_rows(options: DemoOptions) -> list[tuple[str, ...]]:
                 except ImportError as exc:
                     alternate_time = Timing(None, reason=f'{type(exc).__name__}: {exc}')
                 else:
-                    alternate_time = _time_optional(
-                        lambda alternate=alternate, model=model, x_eval=x_eval: _call_alternate(
-                            alternate, model, x_eval
-                        )
-                    )
+                    alternate_time = _time_optional(functools.partial(_call_alternate, alternate, model, x_eval))
 
                 rows.append(
                     (

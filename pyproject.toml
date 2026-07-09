@@ -75,9 +75,6 @@ exclude = ["**/node_modules", "**/__pycache__", "**/.*", "build", "demos"]
 # so that runs which DO have the deps installed (local/editor) still ignore it.
 # demos/ is excluded (it imports pygsl_lite, which has no types).
 strict = true
-exclude = [
-    "^demos/",
-]
 
 
 
