@@ -20,7 +20,11 @@ from typing import TYPE_CHECKING
 import numba
 import numpy as np
 
-from pyakima import (
+PROJECT_ROOT = str(Path(__file__).resolve().parents[1])
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
+from pyakima import (  # noqa: E402
     AkimaSpline,
     SplineCoeffs,
     akima_create_helper,
@@ -29,10 +33,6 @@ from pyakima import (
     cubic_call_vector,
     cubic_call_vector_linear,
 )
-
-PROJECT_ROOT = str(Path(__file__).resolve().parents[1])
-if PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, PROJECT_ROOT)
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
