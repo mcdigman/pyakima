@@ -45,7 +45,7 @@ jobs:
       - name: Install project with typed extras
         run: |
           uv venv
-          uv pip install ".[dev]" scipy matplotlib
+          uv pip install ".[dev]" scipy matplotlib scipy-stubs
 
       # Point mypy at the venv interpreter so it sees the installed deps. No
       # --ignore-missing-imports: imports resolve for real (pygsl_lite is only
@@ -78,7 +78,7 @@ jobs:
       - name: Install project with typed extras
         run: |
           uv venv
-          uv pip install ".[dev]"
+          uv pip install ".[dev]" scipy matplotlib scipy-stubs
 
       - name: Run pyright
         run: >

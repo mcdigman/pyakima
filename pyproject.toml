@@ -40,7 +40,6 @@ demos = [
     "scipy",
     "matplotlib",
     "pygsl_lite",
-    'scip-stubs',
 ]
 
 [tool.pyrefly]
