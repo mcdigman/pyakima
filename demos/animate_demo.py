@@ -21,6 +21,7 @@ Copyright 2026 Matthew C. Digman
 """
 
 from pathlib import Path
+from typing import Any, cast
 
 import matplotlib as mpl
 
@@ -29,6 +30,7 @@ mpl.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import animation
+from matplotlib.axes import Axes
 from scipy.interpolate import CubicSpline
 
 from pyakima import AkimaSpline
@@ -89,7 +91,7 @@ def _rc(theme: dict[str, str]) -> dict[str, object]:
     }
 
 
-def _style(ax: plt.Axes) -> None:
+def _style(ax: Axes) -> None:
     # ticks on all four sides, pointing inward, long enough to read.
     ax.tick_params(which='both', direction='in', top=True, right=True, length=9, width=1.2)
 
@@ -101,7 +103,7 @@ def _render(name: str, theme: dict[str, str]) -> None:
         ('akima', 1, theme['akima'], '--'),
         ('makima', 2, theme['makima'], '-'),
     )
-    with plt.rc_context(_rc(theme)):
+    with plt.rc_context(cast('Any', _rc(theme))):  # keys are dynamic strings, not the RcParams Literal
         fig, (ax_top, ax_bot) = plt.subplots(2, 1, figsize=(9, 7.7), height_ratios=(3, 2), layout='constrained')
 
         cubic, makima, dot = theme['cubic'], theme['makima'], theme['dot']
