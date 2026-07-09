@@ -1,7 +1,5 @@
 """Tests for the public pyakima spline helpers."""
 
-# ruff: noqa: D103
-
 from __future__ import annotations
 
 import warnings
@@ -872,8 +870,8 @@ def test_overflowing_control_value_differences_are_confined_to_strict_coefficien
 
     changed = y.copy()
     changed_index = 7
-    changed[changed_index] = np.finfo(dtype).max
-    changed[changed_index + 1] = -np.finfo(dtype).max
+    changed[changed_index] = np.finfo(dtype).max  # pylint: disable=no-member
+    changed[changed_index + 1] = -np.finfo(dtype).max  # pylint: disable=no-member
     overflowed = akima_create_helper(x, changed)
 
     _assert_component_unchanged_outside_interval(baseline, overflowed, 'a', changed_index, changed_index + 1)
@@ -896,7 +894,7 @@ def test_overflowing_control_value_differences_are_confined_to_strict_coefficien
 
 def test_finite_control_values_with_nonfinite_differences_produce_local_nan_coefficients() -> None:
     x = np.arange(8, dtype=np.float64)
-    finite_max = np.finfo(np.float64).max
+    finite_max = np.finfo(np.float64).max  # pylint: disable=no-member
     y = np.array([0.0, finite_max, -finite_max, 0.0, 1.0, 2.0, 3.0, 4.0])
 
     spline = akima_create_helper(x, y)

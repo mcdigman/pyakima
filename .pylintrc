@@ -1,0 +1,13 @@
+[MAIN]
+load-plugins =
+    pylint_per_file_ignores
+
+[FORMAT]
+max-module-lines=2000
+
+[MESSAGES CONTROL]
+per-file-ignores =
+  tests/*:missing-function-docstring
+
+# line length etc better handled by ruff
+disable = line-too-long, too-many-locals, too-many-branches, too-many-statements, too-many-arguments, too-few-public-methods, too-many-positional-arguments

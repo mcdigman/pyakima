@@ -16,11 +16,7 @@ from typing import TYPE_CHECKING
 import numba
 import numpy as np
 
-PROJECT_ROOT = str(Path(__file__).resolve().parents[1])
-if PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, PROJECT_ROOT)
-
-from pyakima import (  # noqa: E402
+from pyakima import (
     AkimaSpline,
     SplineCoeffs,
     akima_create_helper,
@@ -29,6 +25,10 @@ from pyakima import (  # noqa: E402
     cubic_call_vector,
     cubic_call_vector_linear,
 )
+
+PROJECT_ROOT = str(Path(__file__).resolve().parents[1])
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -61,11 +61,6 @@ class OptionalModule:
     label: str
     module: ModuleType | None
     status: str
-
-    @property
-    def available(self) -> bool:
-        """Whether the optional backend imported successfully."""
-        return self.module is not None
 
 
 @dataclass(frozen=True)
@@ -308,7 +303,7 @@ def _time_required(callback: Callable[[], object]) -> Timing:
 def _time_optional(callback: Callable[[], object]) -> Timing:
     try:
         return _time_required(callback)
-    except Exception as exc:  # noqa: BLE001 - optional backends should skip cleanly.
+    except ImportError as exc:
         return Timing(None, reason=f'{type(exc).__name__}: {exc}')
 
 
@@ -327,7 +322,7 @@ def _time_scalar_grid_required(callback: Callable[[float], object], x_scalars: n
 def _time_scalar_grid_optional(callback: Callable[[float], object], x_scalars: np.ndarray) -> Timing:
     try:
         return _time_scalar_grid_required(callback, x_scalars)
-    except Exception as exc:  # noqa: BLE001 - optional backends should skip cleanly.
+    except ImportError as exc:
         return Timing(None, reason=f'{type(exc).__name__}: {exc}')
 
 
@@ -458,7 +453,7 @@ def _scalar_rows(options: DemoOptions) -> list[tuple[str, ...]]:
 
             try:
                 _, alternate = _alternate_spline(model, x, y)
-            except Exception as exc:  # noqa: BLE001 - optional backends should skip cleanly.
+            except ImportError as exc:
                 alternate_time = Timing(None, reason=f'{type(exc).__name__}: {exc}')
             else:
                 alternate_time = _time_scalar_grid_optional(
@@ -534,7 +529,7 @@ def _vector_rows(options: DemoOptions) -> list[tuple[str, ...]]:
 
                 try:
                     _, alternate = _alternate_spline(model, x, y)
-                except Exception as exc:  # noqa: BLE001 - optional backends should skip cleanly.
+                except ImportError as exc:
                     alternate_time = Timing(None, reason=f'{type(exc).__name__}: {exc}')
                 else:
                     alternate_time = _time_optional(

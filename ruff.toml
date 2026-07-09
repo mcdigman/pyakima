@@ -57,7 +57,7 @@ author = "Matthew C. Digman"
 min-file-size = 1024
 
 [lint.per-file-ignores]
-"tests/*" = ["S101"]
+"tests/*" = ["S101", "D103"]
 "demos/*" = ["T201"]
 
 [lint.pydocstyle]
