@@ -242,11 +242,11 @@ def akima_create_helper(
 @overload
 def spline_single_knot_eval(xint: float | np.floating, spline: SplineCoeffs, i: int) -> float: ...
 @overload
-def spline_single_knot_eval(xint: NDArray[np.floating], spline: SplineCoeffs, i: int) -> NDArray[np.floating]: ...  # type: ignore[overload-cannot-match]
+def spline_single_knot_eval(xint: NDArray[np.floating], spline: SplineCoeffs, i: int) -> NDArray[np.floating]: ...
 @njit()
 def spline_single_knot_eval(
     xint: float | np.floating | NDArray[np.floating], spline: SplineCoeffs, i: int
-) -> float | NDArray[np.floating]:
+) -> float | np.floating | NDArray[np.floating]:
     """
     Evaluate the spline from the values at the knot point with index i.
 
@@ -326,7 +326,7 @@ def cubic_call_scalar(xint: float, spline: SplineCoeffs, ext: int) -> float:
     if xint > spline.x[-1] and ext != 0:
         return y_bound_high
     if xint == spline.x[-1]:
-        return spline.y[-1]
+        return float(spline.y[-1])
 
     # find the proper subspline
     # locate the enclosing subspline directly with a binary search
@@ -502,7 +502,7 @@ def cubic_call(xint: float | NDArray[np.floating], spline: SplineCoeffs, ext: in
 
 
 @numba.extending.overload(cubic_call)
-def _select_cubic_call(xint, spline, ext):  # noqa: ANN001, ANN202 # type: ignore[implicit-any-parameter] # skylos: ignore[SKY-U002]
+def _select_cubic_call(xint, spline, ext):  # type: ignore[no-untyped-def] # noqa: ANN001, ANN202 # skylos: ignore[SKY-U002]
     if not isinstance(ext, numba.core.types.Integer):
         msg1 = 'Unsuported type of input: ' + str(type(ext))
         raise TypeError(msg1)
@@ -511,11 +511,11 @@ def _select_cubic_call(xint, spline, ext):  # noqa: ANN001, ANN202 # type: ignor
         raise TypeError(msg2)
     if isinstance(xint, numba.core.types.Float):
 
-        def temp(xint, spline, ext):  # noqa: ANN001, ANN202 # type: ignore[reportRedeclaration]
+        def temp(xint, spline, ext):  # type: ignore[no-untyped-def] # noqa: ANN001, ANN202
             return cubic_call_scalar(xint, spline, ext)
     elif isinstance(xint, numba.core.types.Array):
 
-        def temp(xint, spline, ext):  # noqa: ANN001, ANN202 # type: ignore[reportRedeclaration]
+        def temp(xint, spline, ext):  # type: ignore[no-untyped-def] # noqa: ANN001, ANN202
             return cubic_call_vector(xint, spline, ext)
     else:
         msg3 = 'Unsuported type of input: ' + str(type(xint))
