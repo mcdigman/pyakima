@@ -1,0 +1,70 @@
+name: Coverage
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: coverage-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.14"
+  # Disable numba JIT so @njit/@jit functions execute as pure Python. coverage.py
+  # instruments Python bytecode and cannot see inside numba-compiled machine code,
+  # so without this the jitted code paths report as uncovered. Runtime numerics
+  # can differ slightly from the compiled path, so this run measures coverage
+  # only -- correctness of the compiled code is covered by the Test workflow.
+  NUMBA_DISABLE_JIT: "1"
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache-dependency-glob: "**/pyproject.toml"
+
+      # Install the project with its dev extra (pytest, numpy/numba via the
+      # project deps) plus coverage into a venv so tests run against the real
+      # installed package (the runner's system Python is externally managed, so
+      # --system installs are rejected). coverage is left unpinned like the other
+      # tool installs so CI tracks the current release.
+      - name: Install project with coverage
+        run: |
+          uv venv
+          uv pip install ".[dev]" coverage
+
+      # Measure coverage of the pyakima package only (--source), so demo/test
+      # files do not dilute the numbers. --branch adds branch coverage for a more
+      # meaningful result than line coverage alone.
+      - name: Run tests under coverage
+        run: .venv/bin/python -m coverage run --branch --source=pyakima -m pytest
+
+      # Print the report and fail the job if total coverage drops below 95%.
+      - name: Coverage report
+        run: .venv/bin/python -m coverage report -m --fail-under=95
+
+      # Emit machine- and human-readable reports for inspection / external tools.
+      - name: Generate coverage artifacts
+        if: ${{ !cancelled() }}
+        run: |
+          .venv/bin/python -m coverage xml
+          .venv/bin/python -m coverage html
+
+      - name: Upload coverage reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: |
+            coverage.xml
+            htmlcov/
+          if-no-files-found: warn
