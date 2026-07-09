@@ -6,7 +6,8 @@ readme = "README.md"
 authors = [
   { name="Matthew C. Digman", email="matthew.digman@vanderbilt.edu" }
 ]
-license = { file = "LICENSE" }
+license = "Apache-2.0 WITH LLVM-exception"
+license-files = ["LICENSE"]
 # Utility package: keep the runtime floors low so it installs broadly. These
 # floors are also the "version-floor" end of the build matrix in
 # .github/workflows/build.yml (uv's lowest-direct resolution installs exactly
@@ -94,7 +95,7 @@ allow-init-docstring = true
 testpaths = ["tests"]
 
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=77.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 # Only the pyakima library is an installable package; demos/ and tests/ are not
