@@ -39,6 +39,33 @@ def _nonlinear_control_points(dtype: type[np.floating] = np.float64) -> tuple[np
     return x, y
 
 
+def _irregular_nonlinear_control_points(dtype: type[np.floating] = np.float64) -> tuple[np.ndarray, np.ndarray]:
+    x = np.array([0.0, 0.5, 2.0, 3.0, 5.0, 8.0], dtype=dtype)
+    y = np.array([0.0, 0.5, 3.5, 2.5, 8.5, 10.0], dtype=dtype)
+    return x, y
+
+
+@pytest.fixture(name='irregular_nonlinear_control_points')
+def _irregular_nonlinear_control_points_fixture() -> tuple[np.ndarray, np.ndarray]:
+    return _irregular_nonlinear_control_points()
+
+
+@pytest.fixture(
+    name='irregular_evaluation_case',
+    params=[
+        pytest.param((np.array([0.0, 0.25, 0.5, 1.25, 2.6, 4.25, 6.5, 8.0]), False), id='forward-interior'),
+        pytest.param((np.array([8.0, 6.5, 4.25, 2.6, 1.25, 0.5, 0.25, 0.0]), False), id='reverse-interior'),
+        pytest.param((np.array([2.6, 0.25, 6.5, 1.25, 8.0, 0.5, 4.25, 0.0]), False), id='shuffled-interior'),
+        pytest.param((np.array([-1.0, 0.0, 0.25, 1.25, 4.25, 8.0, 9.5]), True), id='forward-extrap'),
+        pytest.param((np.array([9.5, 8.0, 4.25, 1.25, 0.25, 0.0, -1.0]), True), id='reverse-extrap'),
+        pytest.param((np.array([4.25, -1.0, 8.0, 0.25, 9.5, 1.25, 0.0]), True), id='shuffled-extrap'),
+    ],
+)
+def _irregular_evaluation_case_fixture(request: pytest.FixtureRequest) -> tuple[np.ndarray, bool]:
+    xint, has_extrapolation = request.param
+    return xint.copy(), has_extrapolation
+
+
 def _assert_same_float_values(
     actual: np.ndarray | np.floating | float,
     expected: np.ndarray | np.floating | float,
@@ -576,6 +603,46 @@ def test_reachable_zero_left_weight_path_matches_hand_computed_coefficients() ->
     _assert_same_float_values(spline.d, np.array([0.0, 0.0, -1.0, 0.0, 0.0]))
 
 
+@pytest.mark.parametrize(
+    ('corner_model', 'expected_b', 'expected_c', 'expected_d'),
+    [
+        (
+            0,
+            np.array([1.0 / 2.0, 5.0 / 4.0, 7.0 / 5.0, 13.0 / 11.0, 19.0 / 13.0]),
+            np.array([3.0 / 2.0, 7.0 / 5.0, -384.0 / 55.0, 370.0 / 143.0, -35.0 / 156.0]),
+            np.array([-1.0, -3.0 / 5.0, 252.0 / 55.0, -120.0 / 143.0, -5.0 / 156.0]),
+        ),
+        (
+            1,
+            np.array([1.0 / 2.0, 5.0 / 4.0, 7.0 / 5.0, 13.0 / 11.0, 19.0 / 13.0]),
+            np.array([3.0 / 2.0, 7.0 / 5.0, -384.0 / 55.0, 370.0 / 143.0, -35.0 / 156.0]),
+            np.array([-1.0, -3.0 / 5.0, 252.0 / 55.0, -120.0 / 143.0, -5.0 / 156.0]),
+        ),
+        (
+            2,
+            np.array([3.0 / 8.0, 13.0 / 10.0, 1.0, 25.0 / 31.0, 49.0 / 33.0]),
+            np.array([19.0 / 10.0, 8.0 / 5.0, -180.0 / 31.0, 3019.0 / 1023.0, -479.0 / 1584.0]),
+            np.array([-13.0 / 10.0, -34.0 / 45.0, 118.0 / 31.0, -1897.0 / 2046.0, -41.0 / 4752.0]),
+        ),
+    ],
+)
+def test_irregular_grid_coefficients_match_hand_computed_values(
+    corner_model: int,
+    expected_b: np.ndarray,
+    expected_c: np.ndarray,
+    expected_d: np.ndarray,
+) -> None:
+    x, y = _irregular_nonlinear_control_points()
+    assert not np.all(np.diff(x) == np.diff(x)[0])
+
+    spline = akima_create_helper(x, y, corner_model=corner_model, denom_small_cut=0.0)
+
+    np.testing.assert_array_equal(spline.a, y[:-1])
+    _assert_same_float_values(spline.b, expected_b, maxulp=32)
+    _assert_same_float_values(spline.c, expected_c, maxulp=32)
+    _assert_same_float_values(spline.d, expected_d, maxulp=32)
+
+
 @pytest.mark.parametrize('corner_model', [0, 1, 2])
 def test_evaluating_exactly_at_knots_returns_control_values(corner_model: int) -> None:
     x, y = _nonlinear_control_points()
@@ -584,6 +651,26 @@ def test_evaluating_exactly_at_knots_returns_control_values(corner_model: int) -
     scalar_values = np.array([cubic_call_scalar(float(knot), spline.spline, 0) for knot in x])
     vector_values = cubic_call_vector(x, spline.spline, 0)
     linear_vector_values = cubic_call_vector_linear(x, spline.spline, 0)
+
+    _assert_same_float_values(scalar_values, y, maxulp=4)
+    _assert_same_float_values(vector_values, y, maxulp=4)
+    _assert_same_float_values(linear_vector_values, y, maxulp=4)
+    _assert_same_float_values(spline(x), y, maxulp=4)
+
+
+@pytest.mark.parametrize('corner_model', [0, 1, 2])
+@pytest.mark.parametrize('ext', [0, 3])
+def test_irregular_grid_evaluating_exactly_at_knots_returns_control_values(
+    irregular_nonlinear_control_points: tuple[np.ndarray, np.ndarray],
+    corner_model: int,
+    ext: int,
+) -> None:
+    x, y = irregular_nonlinear_control_points
+    spline = AkimaSpline(x, y, ext=ext, corner_model=corner_model)
+
+    scalar_values = np.array([cubic_call_scalar(float(knot), spline.spline, ext) for knot in x])
+    vector_values = cubic_call_vector(x, spline.spline, ext)
+    linear_vector_values = cubic_call_vector_linear(x, spline.spline, ext)
 
     _assert_same_float_values(scalar_values, y, maxulp=4)
     _assert_same_float_values(vector_values, y, maxulp=4)
@@ -718,6 +805,45 @@ def test_scalar_vector_dispatch_and_linear_vector_paths_agree(xint: np.ndarray, 
     _assert_same_float_values(dispatch_values, scalar_values, maxulp=0)
     _assert_same_float_values(class_values, scalar_values, maxulp=0)
     _assert_same_float_values(linear_class_values, scalar_values, maxulp=0)
+
+
+@pytest.mark.parametrize('ext', [0, 1, 3, 4])
+def test_irregular_grid_scalar_vector_dispatch_and_linear_vector_paths_agree(
+    irregular_nonlinear_control_points: tuple[np.ndarray, np.ndarray],
+    irregular_evaluation_case: tuple[np.ndarray, bool],
+    ext: int,
+) -> None:
+    x, y = irregular_nonlinear_control_points
+    xint, has_extrapolation = irregular_evaluation_case
+    spline = AkimaSpline(x, y, ext=ext)
+    assert not np.all(np.diff(x) == np.diff(x)[0])
+    assert np.any(spline.spline.c != 0.0) or np.any(spline.spline.d != 0.0)
+
+    below_domain = xint < x[0]
+    above_domain = xint > x[-1]
+    assert bool(below_domain.any()) is has_extrapolation
+    assert bool(above_domain.any()) is has_extrapolation
+
+    scalar_values = np.array([cubic_call_scalar(float(point), spline.spline, ext) for point in xint])
+    vector_values = cubic_call_vector(xint, spline.spline, ext)
+    linear_vector_values = cubic_call_vector_linear(xint, spline.spline, ext)
+    dispatch_values = cubic_call(xint, spline.spline, ext)
+    class_values = spline(xint)
+    linear_class_values = AkimaSpline(x, y, ext=ext, linear_vector_calls=1)(xint)
+
+    _assert_same_float_values(vector_values, scalar_values, maxulp=0)
+    _assert_same_float_values(linear_vector_values, scalar_values, maxulp=0)
+    _assert_same_float_values(dispatch_values, scalar_values, maxulp=0)
+    _assert_same_float_values(class_values, scalar_values, maxulp=0)
+    _assert_same_float_values(linear_class_values, scalar_values, maxulp=0)
+
+    if has_extrapolation and ext == 1:
+        _assert_same_float_values(scalar_values[below_domain | above_domain], np.zeros(2), maxulp=0)
+    elif has_extrapolation and ext == 3:
+        _assert_same_float_values(scalar_values[below_domain], np.array([y[0]]), maxulp=0)
+        _assert_same_float_values(scalar_values[above_domain], np.array([y[-1]]), maxulp=0)
+    elif has_extrapolation and ext == 4:
+        assert np.all(np.isnan(scalar_values[below_domain | above_domain]))
 
 
 @pytest.mark.parametrize('ext', [0, 1, 3, 4])
