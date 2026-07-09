@@ -12,7 +12,6 @@ from dataclasses import dataclass
 from importlib import import_module
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as package_version
-from pathlib import Path
 from statistics import median
 from time import perf_counter
 from typing import TYPE_CHECKING
@@ -20,11 +19,7 @@ from typing import TYPE_CHECKING
 import numba
 import numpy as np
 
-PROJECT_ROOT = str(Path(__file__).resolve().parents[1])
-if PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, PROJECT_ROOT)
-
-from pyakima import (  # noqa: E402
+from pyakima import (
     AkimaSpline,
     SplineCoeffs,
     akima_create_helper,

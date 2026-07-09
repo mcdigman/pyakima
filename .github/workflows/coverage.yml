@@ -48,11 +48,12 @@ jobs:
           uv venv
           uv pip install ".[dev]" coverage
 
-      # Measure coverage of the pyakima package only (--source), so demo/test
-      # files do not dilute the numbers. --branch adds branch coverage for a more
+      # Measure coverage of the pyakima library only (--source), with the bundled
+      # example subpackage (pyakima/demos/) omitted so the unexercised demo scripts
+      # do not dilute the numbers. --branch adds branch coverage for a more
       # meaningful result than line coverage alone.
       - name: Run tests under coverage
-        run: .venv/bin/python -m coverage run --branch --source=pyakima -m pytest
+        run: .venv/bin/python -m coverage run --branch --source=pyakima --omit='*/demos/*' -m pytest
 
       # Pick the coverage gate from the target branch: PRs use github.base_ref
       # (the branch being merged into); pushes fall back to github.ref_name. main

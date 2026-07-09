@@ -28,8 +28,9 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           cache-dependency-glob: "**/pyproject.toml"
 
-      # numpy-style docstring/signature linting. Options come from
-      # [tool.pydoclint] in pyproject.toml (scoped to roughly the darglint rules).
+      # numpy-style docstring/signature linting. Options (including the exclude
+      # list that keeps the pyakima.demos example subpackage out of docstring
+      # linting) come from [tool.pydoclint] in pyproject.toml.
       - name: Run pydoclint
         run: >
           uvx "pydoclint@${{ env.PYDOCLINT_VERSION }}"

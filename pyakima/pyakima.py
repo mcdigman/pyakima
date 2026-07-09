@@ -151,7 +151,7 @@ def akima_create_helper(
         sharp_corners = False
         # denom_small_cut should be zero to match makima
     else:
-        msg4 = f'Unrecognized option for corner model {corner_model}'
+        msg4 = 'Unrecognized option for corner model'
         raise ValueError(msg4)
 
     t_left = np.zeros(n_control, dtype=dtype)  # left sided slopes
@@ -324,7 +324,7 @@ def cubic_call_scalar(xint: float, spline: SplineCoeffs, ext: int) -> float:
         y_bound_low = np.nan
         y_bound_high = np.nan
     else:
-        msg = f'Unrecognized option for extrapolation: {ext}'
+        msg = 'Unrecognized option for extrapolation'
         raise ValueError(msg)
 
     # for constant boundary value handling
@@ -400,7 +400,7 @@ def cubic_call_vector(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int
         y_bound_low = np.nan
         y_bound_high = np.nan
     else:
-        msg = f'Unrecognized option for extrapolation: {ext}'
+        msg = 'Unrecognized option for extrapolation'
         raise ValueError(msg)
 
     dtype = xint.dtype
@@ -591,7 +591,7 @@ def cubic_call_vector_linear(xint: NDArray[np.floating], spline: SplineCoeffs, e
         y_bound_low = np.nan
         y_bound_high = np.nan
     else:
-        msg = f'Unrecognized option for extrapolation: {ext}'
+        msg = 'Unrecognized option for extrapolation'
         raise ValueError(msg)
 
     dtype = xint.dtype
@@ -626,10 +626,12 @@ class AkimaSpline:
 
     Parameters
     ----------
-    x : NDArray[np.floating]
+    x : NDArray[np.floating | np.integer]
         monotonically increasing spline control points (must be at least 5).
-    y : NDArray[np.floating]
+        Integer arrays are accepted and promoted to floating point.
+    y : NDArray[np.floating | np.integer]
         values at the spline control points (size must match x).
+        Integer arrays are accepted and promoted to floating point.
         Non-finite y are used in computations as-is and usually propagate to
         nearby interpolated values.
     ext : int
@@ -659,8 +661,8 @@ class AkimaSpline:
 
     def __init__(
         self,
-        x: NDArray[np.floating],
-        y: NDArray[np.floating],
+        x: NDArray[np.floating | np.integer],
+        y: NDArray[np.floating | np.integer],
         ext: int = 3,
         corner_model: int | str = 0,
         denom_small_cut: float = np.nan,
@@ -683,7 +685,7 @@ class AkimaSpline:
         elif corner_model in {'makima', 2}:
             self.corner_model = 2
         else:
-            msg2 = f'Unrecognized option for corner model: {corner_model}'
+            msg2 = 'Unrecognized option for corner model'
             raise ValueError(msg2)
 
         # default values for the denominator cutoff depend on the method
@@ -703,9 +705,18 @@ class AkimaSpline:
             msg3 = 'denom_small_cut must either be non-negative and finite or nan'
             raise ValueError(msg3)
 
+        # Promote integer inputs to floating point before building the spline. The helper
+        # allocates its coefficient arrays with x.dtype, so integer x/y would silently produce
+        # truncated integer coefficients that differ from the same data cast to float.
+        # np.result_type(.., np.float32) lifts integers to float while preserving each array's
+        # own float precision (float32 stays float32), and np.array supplies the copy the helper
+        # relies on (it stores x/y by reference in the returned SplineCoeffs).
+        x_float: NDArray[np.floating] = np.array(x, dtype=np.result_type(x.dtype, np.float32))
+        y_float: NDArray[np.floating] = np.array(y, dtype=np.result_type(y.dtype, np.float32))
+
         # get the spline object
         self.spline: SplineCoeffs = akima_create_helper(
-            x.copy(), y.copy(), corner_model=self.corner_model, denom_small_cut=self.denom_small_cut
+            x_float, y_float, corner_model=self.corner_model, denom_small_cut=self.denom_small_cut
         )
 
     @overload

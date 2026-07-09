@@ -19,6 +19,17 @@ small: `AkimaSpline` for normal Python callers, `SplineCoeffs` for stored
 coefficients, and `akima_create_helper`/`cubic_call*` helpers for jitted
 workloads.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/akima_demo_dark.gif">
+  <img alt="Two-panel animation. Top: as one control point slides up and down, the pyakima makima curve hugs the data while a natural cubic spline rings above and below the spike. Bottom: a zoom on a sharp kink where the non-rounded, akima, and makima corner models round the corner by differing amounts." src="assets/akima_demo_light.gif">
+</picture>
+
+The top panel slides one control point up and down: the pyakima `makima` fit
+stays local and flat on either side of the spike, while a natural cubic spline
+rings above and below it. The bottom panel zooms into a sharp kink to show the
+three corner models `pyakima` exports — `non-rounded` (GSL), `akima` (SciPy),
+and `makima` — which round the corner by differing amounts.
+
 ## Installation
 
 ```bash
@@ -95,10 +106,20 @@ Boundary handling uses SciPy-like `ext` values:
 `ext=2` (raise on out-of-bounds) is not implemented. `ext=4` is added for
 NaN boundary handling. `AkimaSpline` defaults to `ext=3`.
 
+## Regenerating the Demo
+
+`pyakima.demos` ships as an example subpackage; run it from a source checkout so
+it can write the README assets:
+
+```bash
+pip install -e '.[demos]'               # scipy, matplotlib, pygsl_lite
+python -m pyakima.demos.animate_demo    # writes assets/akima_demo_{light,dark}.gif
+```
+
 ## Performance Snapshot
 
-Run `python -m demos.speed_demo` to compare `pyakima` with the optional SciPy
-and `pygsl_lite` backends available in your environment.
+Run `python -m pyakima.demos.speed_demo` to compare `pyakima` with the optional
+SciPy and `pygsl_lite` backends available in your environment.
 
 The current release-candidate snapshot was measured on a single M3 core with
 Python 3.14.6, Numba 0.66.0, NumPy 2.4.6, SciPy 1.17.1, and `pygsl_lite`
@@ -131,7 +152,8 @@ the call is made through Python or entirely inside jitted code.
 The CI suite checks the package with:
 
 - `pytest`, plus `coverage.py` branch coverage; pull requests targeting `main`
-  are gated at 100% total coverage.
+  are gated at 100% total coverage, while other targets use the development
+  threshold in the coverage workflow.
 - strict `mypy`, plus Pyrefly and Pyright type checking.
 - Ruff with `select = ["ALL"]`, run through `prek` pre-commit hooks.
 - Skylos dead-code detection.
@@ -143,10 +165,10 @@ Useful local checks:
 
 ```bash
 python -m pytest
-NUMBA_DISABLE_JIT=1 python -m coverage run --branch --source=pyakima -m pytest
+NUMBA_DISABLE_JIT=1 python -m coverage run --branch --source=pyakima --omit='*/demos/*' -m pytest
 python -m coverage report -m --fail-under=100
 uvx prek run --all-files --show-diff-on-failure --color=always
-uvx skylos pyakima demos tests
+uvx skylos pyakima tests
 ```
 
 ## License
