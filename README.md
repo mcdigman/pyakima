@@ -10,7 +10,8 @@
 `pyakima` is a fast, JIT-compatible Akima spline implementation written in
 pure Python.
 
-Akima splines are a type of cubic spline that guarantees continuous differentiability and local behavior while minimizing overshoot on both regular and irregular interpolation grids.
+Akima splines are a type of cubic spline that can guarantee continuous differentiability and local behavior while minimizing overshoot on both regular and irregular interpolation grids.
+
 `pyakima` ships a small object-oriented Python API for ordinary use and
 Numba-friendly helper functions for building and evaluating splines inside
 fully jitted code.
@@ -19,8 +20,8 @@ The implementation is fully typed (`py.typed`) and keeps the public surface
 small:
 `AkimaSpline` is an object-oriented interface which simplifies calls for non-jitted Python callers; it has only a constructor and a `__call__` method.
 For jitted workloads,
-1. The spline interpolation itself are represented as knots stored in a `SplineCoeffs` object, computed once via `akima_create_helper`.
-2. The spline is called from `cubic_call`, which selects the appropriate knot and evaluates the polynomial with `spline_single_knot_eval`.
+1. The spline interpolation itself is represented as a set of coefficients stored in a `SplineCoeffs` object, computed once via `akima_create_helper`.
+2. The spline is called from `cubic_call`, which selects the appropriate coefficients and evaluates the polynomial with `spline_single_knot_eval`.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/akima_demo_dark.gif">
@@ -34,9 +35,9 @@ three corner models `pyakima` exports:
 1. `non-rounded`: Algorithm based on [^emu], comparable numerical behavior to GSL; note the unstable behavior is because
      the algorithm is non-differentiable at corners, _not_ a peculiar limitation of this implementation [^num].
 2. `akima` ([SciPy parity](https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.Akima1DInterpolator.html)) [^aki].
-   Discontinuous behavior is less severe than `non-rounded`, but slightly more prone to overshoot and still has special edge case handling
-3. `makima` [Modified Akima Algorithm](https://www.mathworks.com/help/matlab/ref/makima.html) [^mak]; reccomended default
-   Less overshoot than `akima`, while mathematical guaranteed to preserve differentiability/continuous behavior at corners without special edge case handling.
+   Discontinuous behavior is less severe than `non-rounded`; slightly more prone to overshoot, and still has special edge-case handling.
+3. `makima` [Modified Akima Algorithm](https://www.mathworks.com/help/matlab/ref/makima.html) [^mak]; recommended default
+   Less overshoot than `akima`, while mathematically guaranteed to preserve differentiability/continuous behavior at corners without special edge-case handling.
    Similar performance to `akima` in most cases.
 
 ## Table of Contents
@@ -50,7 +51,6 @@ three corner models `pyakima` exports:
 - [Quality Gates](#quality-gates)
 - [Contributing](#contributing)
 - [License](#license)
-- [Footnotes](#footnotes)
 
 ## Installation
 
@@ -145,13 +145,13 @@ SciPy and `pygsl_lite` backends available in your environment.
 
 The current release-candidate snapshot was measured on a single Apple Silicon M3 core with
 Python 3.14.6, Numba 0.66.0, NumPy 2.4.6, SciPy 1.17.1, and `pygsl_lite`
-0.1.8. The demo used 50 repeats with each repeat adaptively looped to at least
-0.100 s, and representitive range of spline and caller sizes.
-The full benchmark is available in `docs/benchmarkes/m3_0_1_0_speeds.txt`
+0.1.8. The demo used 50 repeats, with each repeat adaptively looped to at least
+0.100 s, and a representative range of spline and caller sizes.
+The full benchmark is available in `docs/benchmarks/m3_0_1_0_speeds.txt`
 
 Highlights from that run:
 
-- `pyakima` was minimum 1.7x faster than SciPy `Akima1DInterpolator` on every benchmark.
+- `pyakima` was minimum 1.7x faster than SciPy `Akima1DInterpolator` across all benchmarks.
 - Spline creation was about 5.7-32.6x faster than SciPy.
 - With Python-call overhead, scalar evaluation was about 2.3x faster than SciPy but 0.3-0.4x slower than `pygsl_lite`. When called fully jitted (no Python-call overhead),
 scalar evaluation was about 109-361x faster than SciPy and 18-52x faster than `pygsl_lite`.
@@ -174,7 +174,7 @@ the call is made through Python or entirely inside jitted code.
 The CI suite checks the package with:
 
 - `pytest` unit test suite; pull requests to `dev` only test modern versions,
-   while pull requests targetting `main` run for all supported versions.
+   while pull requests targeting `main` run for all supported versions.
 - `coverage.py` branch coverage; pull requests targeting `main`
   are gated at 100% total coverage, while other targets use the development
   threshold in the coverage workflow.
@@ -196,15 +196,15 @@ uvx skylos pyakima tests
 ```
 
 ## Contributing
-Thank you for your interest in contributing to improving the repository!
-Feature requests and bug reports can be made through [GitHub Issues](https://github.com/mcdigman/pyakima/issues). Bug reports should be accompanied by a minimal reproducing example and description of the desired behaior.
+Thank you for your interest in helping improve the repository!
+Feature requests and bug reports can be made through [GitHub Issues](https://github.com/mcdigman/pyakima/issues). Bug reports should be accompanied by a minimal reproducing example and description of the desired behavior.
 Suggested contributions or fixes should be made through pull requests to `dev`.
 All new code must be fully type annotated, and pass the static type-checking and linting rules; to reduce churn, ensure, at minimum, `prek run --all-files` passes before attempting to commit.
-New core/utility functions should have full `numpy` style docstrings (verify with `pydoclint --style=numpy`), and full unit test coverage, verified with:
-``
+New core/utility functions should have full `numpy`-style docstrings (verify with `pydoclint --style=numpy`), and full unit test coverage, verified with:
+```
 NUMBA_DISABLE_JIT=1 python -m coverage run --branch --source=pyakima --omit='*/demos/*' -m pytest
 python -m coverage report -m --fail-under=100
-``
+```
 
 
 ## License
@@ -213,9 +213,8 @@ python -m coverage report -m --fail-under=100
 full license text.
 
 
-## Footnotes
 [^emu]: G. Engeln-Müllges & F. Uhlig, *Numerical Algorithms with C*, Springer, 1996, ch. 13 "Akima and Renner Subsplines," Algorithm 13.1. ISBN 978-3-642-64682-9.
-[^num]: Note: the internals of the GSL implementation have never viewed by the repository author. However, calls to GSL exhibit near-identical behavior, supporting that it is an algorithm limitation rather than an implementation limitation.
+[^num]: Note: the internals of the GSL implementation have never been viewed by the repository author. However, calls to GSL exhibit near-identical behavior, supporting that the issue is algorithmic rather than due to implementation error.
 [^aki]: Akima, Hiroshi. "A new method of interpolation and smooth curve fitting based on local procedures." Journal of the ACM (JACM) , 17.4, 1970, pp. 589–602.
 [^mak]: C. Moler, [*Makima Piecewise Cubic Interpolation*](https://blogs.mathworks.com/cleve/2019/04/29/makima-piecewise-cubic-interpolation/),
   Cleve's Corner (MathWorks blog), 2019.
