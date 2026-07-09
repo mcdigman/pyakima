@@ -8,6 +8,9 @@ dist/
 .coverage
 tach.toml
 
+# Sphinx HTML docs build output
+docs/_build/
+
 # Byte-compiled / caches
 __pycache__/
 *.py[cod]
