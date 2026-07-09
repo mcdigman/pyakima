@@ -2,6 +2,13 @@
 load-plugins =
     pylint_per_file_ignores
 
+[TYPECHECK]
+# pygsl_lite is an optional demo backend (C extension requiring system GSL); it
+# is not installed in CI, so tell pylint not to try resolving it. scipy and
+# matplotlib are installed in the lint job, so they are checked normally.
+ignored-modules =
+    pygsl_lite
+
 [FORMAT]
 max-module-lines=2000
 

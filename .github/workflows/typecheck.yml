@@ -38,11 +38,14 @@ jobs:
       # real numpy/numba types (the runner's system Python is externally managed,
       # so --system installs are rejected). This matches the pyright job and keeps
       # CI in step with local runs; strict mode's disallow-untyped-decorators only
-      # stays quiet when numba/pytest resolve to real types rather than Any.
+      # stays quiet when numba/pytest resolve to real types rather than Any. scipy
+      # and matplotlib are added so demos/step_demo.py imports resolve; the other
+      # demo backend, pygsl_lite, is handled by the ignore_missing_imports
+      # override in [tool.mypy] (pyproject.toml) since it is not installable here.
       - name: Install project with typed extras
         run: |
           uv venv
-          uv pip install ".[dev]"
+          uv pip install ".[dev]" scipy matplotlib
 
       # Point mypy at the venv interpreter so it sees the installed deps. No
       # --ignore-missing-imports: imports resolve for real (pygsl_lite is only

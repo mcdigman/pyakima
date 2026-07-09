@@ -68,11 +68,7 @@ reportMissingImports = "none"
 exclude = ["**/node_modules", "**/__pycache__", "**/.*", "build"]
 
 [tool.mypy]
-# The mypy job in .github/workflows/typecheck.yml runs mypy without installing
-# the project, so third-party imports are resolved with --ignore-missing-imports
-# on the command line. numba is called out explicitly here (it ships no py.typed)
-# so that runs which DO have the deps installed (local/editor) still ignore it.
-# demos/ is excluded (it imports pygsl_lite, which has no types).
+# Settings for the mypy job in .github/workflows/typecheck.yml
 strict = true
 
 [[tool.mypy.overrides]]
