@@ -34,15 +34,23 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           cache-dependency-glob: "**/pyproject.toml"
 
-      # This job runs mypy without installing the project, so third-party imports
-      # are resolved with the blanket --ignore-missing-imports flag. numba's
-      # missing types are additionally ignored via [[tool.mypy.overrides]] in
-      # pyproject.toml (numba ships no py.typed), which mypy reads from the repo
-      # root -- so numba stays ignored even if this job later installs its deps.
+      # Install the project with its dev extra into a venv so mypy resolves the
+      # real numpy/numba types (the runner's system Python is externally managed,
+      # so --system installs are rejected). This matches the pyright job and keeps
+      # CI in step with local runs; strict mode's disallow-untyped-decorators only
+      # stays quiet when numba/pytest resolve to real types rather than Any.
+      - name: Install project with typed extras
+        run: |
+          uv venv
+          uv pip install ".[dev]"
+
+      # Point mypy at the venv interpreter so it sees the installed deps. No
+      # --ignore-missing-imports: imports resolve for real (pygsl_lite is only
+      # imported dynamically via importlib, so mypy never flags it).
       - name: Run mypy
         run: >
           uvx --from "mypy==${{ env.MYPY_VERSION }}" mypy
-          --ignore-missing-imports
+          --python-executable .venv/bin/python
           --explicit-package-bases
           .
 
