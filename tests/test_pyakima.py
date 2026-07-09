@@ -287,6 +287,23 @@ def test_linear_vector_calls_keyword_does_not_change_values(linear_vector_calls:
     _assert_same_float_values(actual, baseline, maxulp=4)
 
 
+@pytest.mark.parametrize('corner_model', [0, 1, 2])
+def test_integer_control_points_match_float_cast_and_yield_float_coefficients(corner_model: int) -> None:
+    # integer x/y must not produce truncated integer coefficients; the result should match
+    # the same data cast to float rather than silently differing (non-affine data exposes this).
+    x_int = np.array([0, 1, 2, 3, 4, 5, 6], dtype=np.int64)
+    y_int = np.array([0, 1, 8, 27, 10, 5, 2], dtype=np.int64)
+
+    int_spline = AkimaSpline(x_int, y_int, ext=0, corner_model=corner_model)
+    float_spline = AkimaSpline(x_int.astype(np.float64), y_int.astype(np.float64), ext=0, corner_model=corner_model)
+
+    for name in ('a', 'b', 'c', 'd'):
+        assert np.issubdtype(getattr(int_spline.spline, name).dtype, np.floating)
+
+    xint = np.array([0.5, 1.5, 2.5, 3.5, 4.5, 5.5])
+    _assert_same_float_values(int_spline(xint), float_spline(xint))
+
+
 def test_invalid_linear_vector_calls_raises_value_error() -> None:
     x, y = _affine_control_points()
 

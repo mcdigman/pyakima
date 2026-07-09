@@ -681,9 +681,18 @@ class AkimaSpline:
             msg3 = 'denom_small_cut must either be non-negative and finite or nan'
             raise ValueError(msg3)
 
+        # Promote integer inputs to floating point before building the spline. The helper
+        # allocates its coefficient arrays with x.dtype, so integer x/y would silently produce
+        # truncated integer coefficients that differ from the same data cast to float.
+        # np.result_type(.., np.float32) lifts integers to float while preserving each array's
+        # own float precision (float32 stays float32), and np.array supplies the copy the helper
+        # relies on (it stores x/y by reference in the returned SplineCoeffs).
+        x = np.array(x, dtype=np.result_type(x.dtype, np.float32))
+        y = np.array(y, dtype=np.result_type(y.dtype, np.float32))
+
         # get the spline object
         self.spline: SplineCoeffs = akima_create_helper(
-            x.copy(), y.copy(), corner_model=self.corner_model, denom_small_cut=self.denom_small_cut
+            x, y, corner_model=self.corner_model, denom_small_cut=self.denom_small_cut
         )
 
     @overload
