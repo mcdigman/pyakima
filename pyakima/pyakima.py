@@ -266,12 +266,13 @@ def spline_single_knot_eval(
     float | NDArray[np.floating]
         evaluated points of the same shape as xint; preserves input type for array inputs but scalars are cast to float
     """
-    return (
+    result: float | np.floating | NDArray[np.floating] = (
         spline.a[i]
         + spline.b[i] * (xint - spline.x[i])
         + spline.c[i] * (xint - spline.x[i]) ** 2
         + spline.d[i] * (xint - spline.x[i]) ** 3
     )
+    return result
 
 
 @njit()

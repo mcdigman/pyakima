@@ -15,6 +15,7 @@ from pathlib import Path
 from statistics import median
 from time import perf_counter
 from typing import TYPE_CHECKING
+import functools
 
 import numba
 import numpy as np
@@ -261,10 +262,10 @@ def _call_alternate(spline: object, model: ModelCase, xint: float | np.ndarray) 
 
 
 @numba.njit()
-def _cubic_call_scalar_grid_jit(x_scalars: np.ndarray, spline: SplineCoeffs, ext: int) -> float:
+def _cubic_call_scalar_grid_jit(x_scalars: np.ndarray, spline: SplineCoeffs) -> float:
     total = 0.0
     for x_scalar in x_scalars:
-        total += cubic_call_scalar(float(x_scalar), spline, ext)
+        total += cubic_call_scalar(float(x_scalar), spline, EXT)
     return total
 
 
@@ -272,12 +273,11 @@ def _cubic_call_scalar_grid_jit(x_scalars: np.ndarray, spline: SplineCoeffs, ext
 def _cubic_call_vector_loop_jit(
     x_eval: np.ndarray,
     spline: SplineCoeffs,
-    ext: int,
     inner_loops: int,
 ) -> float:
     total = 0.0
     for _ in range(inner_loops):
-        values = cubic_call(x_eval, spline, ext)
+        values = cubic_call(x_eval, spline, EXT)
         total += values[0]
         if values.size > 1:
             total += values[-1]
@@ -330,7 +330,7 @@ def _time_scalar_grid_optional(callback: Callable[[float], object], x_scalars: n
 
 
 def _time_scalar_jit_grid_required(x_scalars: np.ndarray, spline: SplineCoeffs) -> Timing:
-    timing = _time_required(lambda: _cubic_call_scalar_grid_jit(x_scalars, spline, EXT))
+    timing = _time_required(functools.partial(_cubic_call_scalar_grid_jit, x_scalars, spline))
     if timing.seconds is None:
         msg = 'required jitted scalar-grid timing unexpectedly failed'
         raise RuntimeError(msg)
@@ -343,7 +343,7 @@ def _vector_jit_inner_loops(n_eval: int) -> int:
 
 def _time_vector_jit_loop_required(x_eval: np.ndarray, spline: SplineCoeffs) -> Timing:
     inner_loops = _vector_jit_inner_loops(x_eval.size)
-    timing = _time_required(lambda: _cubic_call_vector_loop_jit(x_eval, spline, EXT, inner_loops))
+    timing = _time_required(lambda: _cubic_call_vector_loop_jit(x_eval, spline, inner_loops))
     if timing.seconds is None:
         msg = 'required jitted vector-loop timing unexpectedly failed'
         raise RuntimeError(msg)
@@ -409,8 +409,8 @@ def _creation_rows() -> list[tuple[str, ...]]:
     for model in MODELS:
         for n_control in CONTROL_POINT_LENGTHS:
             x, y = _control_points(n_control)
-            class_time = _time_required(lambda x=x, y=y, model=model: _pyakima_spline(x, y, model))
-            helper_time = _time_required(lambda x=x, y=y, model=model: _pyakima_helper(x, y, model))
+            class_time = _time_required(functools.partial(_pyakima_spline, x, y, model))
+            helper_time = _time_required(functools.partial(_pyakima_helper, x, y, model))
 
             alternate_time = _time_optional(lambda model=model, x=x, y=y: _alternate_spline(model, x, y)[1])
             rows.append(

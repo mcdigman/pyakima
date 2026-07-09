@@ -74,12 +74,11 @@ exclude = ["**/node_modules", "**/__pycache__", "**/.*", "build", "demos"]
 # on the command line. numba is called out explicitly here (it ships no py.typed)
 # so that runs which DO have the deps installed (local/editor) still ignore it.
 # demos/ is excluded (it imports pygsl_lite, which has no types).
+strict = true
 exclude = [
     "^demos/",
 ]
 
-[[tool.mypy.overrides]]
-module = ["numba", "numba.*"]
 
 
 [tool.pydoclint]
