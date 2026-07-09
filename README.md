@@ -41,15 +41,16 @@ three corner models `pyakima` exports:
    Similar performance to `akima` in most cases.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/akima_demo_dark.gif">
-  <img alt="Single panel animation. As the control points slide between a regular and irregular grid, the pyakima makima curve smoothly hugs the data, while the natural cubic spline oscillates so strongly it extends off the plotted y axis." src="assets/akima_demo_light.gif">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/akima_grid_dark.gif">
+  <img alt="Single panel animation. As the control points slide between a regular and irregular grid, the pyakima makima curve smoothly hugs the data, while the natural cubic spline oscillates so strongly it extends off the plotted y axis." src="assets/akima_grid_light.gif">
 </picture>
 
 The control points oscillate smoothly between ~regular uniform-grid spacing and an inverse-CDF-based spacing.
 Such a spacing is similar to what might be used when using Akima splines for a PSD estimation task, or in approximating a function
-with sharp features with as control points as possible. Such uses with irregular grids are a key modern application of Akima splines,
-and are of key importance to their utility gravitational-wave detection applications, such as using trans-dimensional MCMC
+with sharp features with as few control points as possible. Such uses with irregular grids are a key modern application of Akima splines,
+and are of key importance to their utility in gravitational-wave detection applications, such as using trans-dimensional MCMC
 to adaptively fit Akima splines to un-modeled gravitational wave sources [^bwv][^mag][^pak].
+Natural cubic splines oscillate wildly on the same irregularly-spaced grid task, typically makes them unsuitable for such analyses.
 
 ## Table of Contents
 
