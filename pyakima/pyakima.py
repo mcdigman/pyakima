@@ -1,6 +1,6 @@
 """Python Akima Spline Implementation.
 
-Copyright Matthew Digman 2025
+Copyright 2026 Matthew C. Digman
 
 objects defined:
 
@@ -13,7 +13,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, NamedTuple, overload
 
-import numba
 import numba.core.types
 import numba.extending
 import numpy as np
@@ -639,7 +638,7 @@ class AkimaSpline:
         linear_vector_calls: int = 0,
     ) -> None:
         # record the inputs
-        if linear_vector_calls not in (0, 1):
+        if linear_vector_calls not in {0, 1}:
             msg1 = 'linear_vector_calls must be in (0, 1)'
             raise ValueError(msg1)
 
@@ -648,11 +647,11 @@ class AkimaSpline:
         self.linear_vector_calls: int = linear_vector_calls
 
         # parse the input corner model
-        if corner_model in ('non-rounded', 0):
+        if corner_model in {'non-rounded', 0}:
             self.corner_model: int = 0
-        elif corner_model in ('akima', 1):
+        elif corner_model in {'akima', 1}:
             self.corner_model = 1
-        elif corner_model in ('makima', 2):
+        elif corner_model in {'makima', 2}:
             self.corner_model = 2
         else:
             msg2 = f'Unrecognized option for corner model: {corner_model}'

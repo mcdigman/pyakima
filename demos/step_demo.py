@@ -1,7 +1,7 @@
 """
 Demonstrate calling python akima method.
 
-Copyright Matthew Digman 2025
+Copyright 2025 Matthew C. Digman
 
 """
 

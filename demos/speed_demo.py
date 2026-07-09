@@ -1,4 +1,7 @@
-"""Demonstrate pyakima timing against optional alternate implementations."""
+"""Demonstrate pyakima timing against optional alternate implementations.
+
+Copyright 2026 Matthew C. Digman
+"""
 
 from __future__ import annotations
 

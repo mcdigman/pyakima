@@ -1,4 +1,7 @@
-"""Tests for the public pyakima spline helpers."""
+"""Tests for the public pyakima spline helpers.
+
+Copyright 2026 Matthew C. Digman
+"""
 
 from __future__ import annotations
 
