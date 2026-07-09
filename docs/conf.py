@@ -1,5 +1,7 @@
 """Sphinx configuration for the pyakima HTML documentation build.
 
+Copyright 2026 Matthew C. Digman
+
 Run locally with ``make -C docs html`` (or ``sphinx-build -b html docs
 docs/_build/html``); CI builds the same target in .github/workflows/docs.yml.
 """

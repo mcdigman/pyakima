@@ -30,4 +30,4 @@ jobs:
       # uvx-based checks) so CI tracks the current release. False positives are
       # suppressed inline with `# skylos: ignore[...]` comments in the source.
       - name: Run skylos
-        run: uvx skylos pyakima demos tests
+        run: uvx skylos pyakima tests

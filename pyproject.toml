@@ -43,8 +43,9 @@ docs = [
     "furo",
     "myst-parser",
 ]
-# Optional dependencies for the scripts under demos/. speed_demo.py skips
-# individual optional backends at runtime when an import is unavailable.
+# Optional runtime backends for the scripts in the pyakima.demos subpackage
+# (pyakima/demos/). speed_demo.py skips individual optional backends at runtime
+# when an import is unavailable.
 demos = [
     "scipy",
     "matplotlib",
@@ -54,8 +55,8 @@ demos = [
 [tool.pyrefly]
 # pyrefly runs as a prek hook (.pre-commit-config.yaml) and resolves the typed
 # packages listed in that hook's additional_dependencies (numpy ships py.typed).
-# demos/ pulls in scipy/matplotlib/pygsl_lite, which the hook does not install,
-# so it is excluded here.
+# pyakima/demos/ pulls in scipy/matplotlib/pygsl_lite, which the hook does not
+# install, so those imports are silenced via ignore-missing-imports below.
 project-includes = [
     "**/*.py*",
     "**/*.ipynb",
@@ -71,13 +72,21 @@ ignore-missing-imports = ["pygsl_lite", "pygsl_lite.*", "matplotlib.pyplot", "sc
 pythonVersion = "3.10"
 reportMissingImports = "none"
 # Exclude dot-directories (e.g. the CI job's .venv) so pyright does not
-# type-check installed dependencies, the "build" copy the wheel build creates,
-# and demos/ (which needs scipy/matplotlib/pygsl_lite not installed in CI).
+# type-check installed dependencies, and the "build" copy the wheel build
+# creates. The pyakima.demos subpackage is checked here (the pyright CI job
+# installs scipy/matplotlib so its imports resolve; pygsl_lite is covered by
+# reportMissingImports = "none").
 exclude = ["**/node_modules", "**/__pycache__", "**/.*", "build"]
 
 [tool.mypy]
 # Settings for the mypy job in .github/workflows/typecheck.yml
 strict = true
+# A plain `mypy .` crawls the whole working tree. Skip the throwaway build/ tree
+# (a wheel build leaves a second copy of the package at build/lib/pyakima, which
+# otherwise collides with ./pyakima as "Duplicate module named pyakima") and the
+# local virtualenv. A clean CI checkout has neither, so this only affects local
+# runs; the typecheck.yml job additionally passes --explicit-package-bases.
+exclude = ['^build/', '^\.venv/']
 
 [[tool.mypy.overrides]]
 module = ["pygsl_lite", "pygsl_lite.*"]
@@ -95,6 +104,13 @@ style = "numpy"
 check-return-types = true
 check-class-attributes = true
 allow-init-docstring = true
+# pydoclint's built-in default only excludes \.git|\.tox, so a whole-tree run
+# (pydoclint .) descends into .venv/build. Set the exclude here (config, not the
+# CI --exclude flag) so both the workflow's `pydoclint pyakima` run and a local
+# `pydoclint .` skip the same paths. pyakima/demos ships as an example subpackage
+# but is deliberately kept out of docstring linting (as it was before it moved
+# under pyakima/, and as tests/ still is).
+exclude = '\.git|\.tox|\.venv|\.eggs|_build|buck-out|build|dist|__pycache__|\.mypy_cache|\.pytest_cache|\.ruff_cache|pyakima/demos/'
 
 [tool.pytest.ini_options]
 # Real unit tests live in tests/. There are none yet -- the directory is a
@@ -106,8 +122,10 @@ testpaths = ["tests"]
 requires = ["setuptools>=77.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
-# Only the pyakima library is an installable package; demos/ and tests/ are not
-# part of the distribution. Pin discovery so setuptools' flat-layout
-# auto-discovery doesn't error on multiple top-level directories.
+# The distribution ships pyakima and its pyakima.demos example subpackage; the
+# top-level tests/ directory is not part of it. The "pyakima*" pattern matches
+# both pyakima and pyakima.demos while excluding tests/, which also stops
+# setuptools' flat-layout auto-discovery from erroring on multiple top-level
+# directories.
 [tool.setuptools.packages.find]
 include = ["pyakima*"]

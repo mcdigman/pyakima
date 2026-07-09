@@ -1,5 +1,7 @@
 """Provide numba-compatible Akima spline interpolation.
 
+Copyright 2026 Matthew C. Digman
+
 Expose the public building blocks of the :mod:`pyakima.pyakima` module: the
 :class:`AkimaSpline` object for constructing and evaluating a spline, the
 :class:`SplineCoeffs` named tuple that stores a spline's coefficients, and the
@@ -7,7 +9,8 @@ Expose the public building blocks of the :mod:`pyakima.pyakima` module: the
 numba-compiled code.
 """
 
-from importlib.metadata import PackageNotFoundError, version as _version
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _version
 
 from pyakima.pyakima import (
     AkimaSpline,
@@ -28,11 +31,11 @@ except PackageNotFoundError:  # pragma: no cover - running from an uninstalled s
 __all__ = [
     'AkimaSpline',
     'SplineCoeffs',
+    '__version__',
     'akima_create_helper',
     'cubic_call',
     'cubic_call_scalar',
     'cubic_call_vector',
     'cubic_call_vector_linear',
     'spline_single_knot_eval',
-    '__version__',
 ]
