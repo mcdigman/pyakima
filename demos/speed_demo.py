@@ -232,7 +232,7 @@ def _alternate_spline(model: ModelCase, x: np.ndarray, y: np.ndarray) -> tuple[s
     return model.alternate, _scipy_spline(x, y, model.scipy_method)
 
 
-def _call_gsl_scalar(spline: pygsl_lite.spline.akima, xint: float) -> object:
+def _call_gsl_scalar(spline: pygsl_lite.spline.akima, xint: float) -> object:  # pyrefly: ignore[not-a-type]
     if hasattr(spline, 'eval'):
         return spline.eval(xint)
     if hasattr(spline, 'eval_e'):
@@ -241,7 +241,7 @@ def _call_gsl_scalar(spline: pygsl_lite.spline.akima, xint: float) -> object:
     raise AttributeError(msg)
 
 
-def _call_gsl_vector(spline: pygsl_lite.spline.akima, xint: np.ndarray) -> object:
+def _call_gsl_vector(spline: pygsl_lite.spline.akima, xint: np.ndarray) -> object:  # pyrefly: ignore[not-a-type]
     if not hasattr(spline, 'eval_vector'):
         msg = 'pygsl_lite spline has no eval_vector method'
         raise AttributeError(msg)
@@ -438,7 +438,10 @@ def _scalar_rows(options: DemoOptions) -> list[tuple[str, ...]]:
             coeffs = py_spline.spline
 
             def _call_scalar(coeffs: SplineCoeffs, xint: float) -> float:
-                return cubic_call(xint, coeffs, EXT)
+                return cubic_call_scalar(xint, coeffs, EXT)
+
+            def _call_cubic(coeffs: SplineCoeffs, xint: float) -> float:
+                return cubic_call_scalar(xint, coeffs, EXT)
 
             scalar_time = _time_scalar_grid_required(
                 functools.partial(_call_scalar, coeffs),
@@ -450,7 +453,7 @@ def _scalar_rows(options: DemoOptions) -> list[tuple[str, ...]]:
             if options.show_overhead:
                 class_time = _time_scalar_grid_required(py_spline, x_scalars)
                 dispatch_time = _time_scalar_grid_required(
-                    functools.partial(_call_scalar, coeffs),
+                    functools.partial(_call_cubic, coeffs),
                     x_scalars,
                 )
                 pyakima_timings.extend((class_time, dispatch_time))

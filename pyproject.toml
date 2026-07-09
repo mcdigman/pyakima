@@ -51,9 +51,8 @@ project-includes = [
     "**/*.py*",
     "**/*.ipynb",
 ]
-project-excludes = [
-    "demos/**",
-]
+project-excludes = []
+ignore-missing-imports = ["pygsl_lite", "pygsl_lite.*", "matplotlib.pyplot", "scipy.interpolate"]
 
 [tool.pyright]
 # Settings for the pyright job in .github/workflows/typecheck.yml. pyright
