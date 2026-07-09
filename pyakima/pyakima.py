@@ -55,7 +55,7 @@ class SplineCoeffs(NamedTuple):
 
 @njit(error_model='numpy')
 def akima_create_helper(
-    x: NDArray[np.floating], y: NDArray[np.floating], corner_model: int = 0, denom_small_cut: float = 0.0
+    x: NDArray[np.floating], y: NDArray[np.floating], corner_model: int = 2, denom_small_cut: float = 0.0
 ) -> SplineCoeffs:
     """
     Precompute the coefficients necessary to handle akima splines.
@@ -73,9 +73,10 @@ def akima_create_helper(
         selection for how corners are handled:
         0 uses the Wodicka non-rounded corner method (near-exact match to gsl when
         denom_small_cut == 0, not differentiable at sharp corners);
-        1 uses the default akima method (close to scipy method='akima');
+        1 uses the basic akima method (close to scipy method='akima');
         2 uses the modified/makima method with stabilizing weights that need no special
         corner handling (close to scipy method='makima').
+        Default is 2 ('makima')
     denom_small_cut : float
         threshold below which the slope denominator is treated as zero and handled
         specially. Usually best left at zero.
@@ -644,6 +645,7 @@ class AkimaSpline:
         0 or 'non-rounded' for the non-rounded method of Wodicka;
         1 or 'akima' for the method described by Akima (scipy method='akima');
         2 or 'makima' for the modified method with less overshoot (scipy method='makima').
+        Default is 'makima'.
     denom_small_cut : float
         cutoff in the denominator of the spline slopes, below which the spline has a corner.
         The default nan selects a method-specific value.
@@ -664,7 +666,7 @@ class AkimaSpline:
         x: NDArray[np.floating | np.integer],
         y: NDArray[np.floating | np.integer],
         ext: int = 3,
-        corner_model: int | str = 0,
+        corner_model: int | str = 'makima',
         denom_small_cut: float = np.nan,
         linear_vector_calls: int = 0,
     ) -> None:
