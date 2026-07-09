@@ -125,6 +125,16 @@ def _typed_affine_spline(dtype: type[np.floating]) -> SplineCoeffs:
     )
 
 
+@njit()
+def _jitted_cubic_call_scalar(xint: float, spline: SplineCoeffs, ext: int) -> float:
+    return cubic_call(xint, spline, ext)
+
+
+@njit()
+def _jitted_cubic_call_vector(xint: np.ndarray, spline: SplineCoeffs, ext: int) -> np.ndarray:
+    return cubic_call(xint, spline, ext)
+
+
 @pytest.mark.parametrize('corner_model', [0, 1, 2, 'non-rounded', 'akima', 'makima'])
 def test_minimum_length_affine_spline_reproduces_line_for_all_corner_models(corner_model: int | str) -> None:
     x, y = _affine_control_points()
@@ -681,7 +691,44 @@ def test_scalar_vector_dispatch_and_linear_vector_paths_agree(xint: np.ndarray, 
     _assert_same_float_values(linear_class_values, scalar_values, maxulp=0)
 
 
-def test_cubic_call_rejects_non_float_scalar_and_non_array_inputs() -> None:
+@pytest.mark.parametrize('ext', [0, 1, 3, 4])
+def test_cubic_call_matches_numba_overload_for_scalar_and_vector_inputs(ext: int) -> None:
+    x, y = _nonlinear_control_points()
+    spline = AkimaSpline(x, y, ext=ext)
+    scalar_x = 2.25
+    vector_x = np.array([-0.5, 0.0, 0.25, 1.75, 3.5, 5.25])
+
+    _assert_same_float_values(
+        _jitted_cubic_call_scalar(scalar_x, spline.spline, ext),
+        cubic_call(scalar_x, spline.spline, ext),
+        maxulp=0,
+    )
+    _assert_same_float_values(
+        _jitted_cubic_call_vector(vector_x, spline.spline, ext),
+        cubic_call(vector_x, spline.spline, ext),
+        maxulp=0,
+    )
+
+
+def test_cubic_call_invalid_ext_matches_numba_overload_for_scalar_and_vector_inputs() -> None:
+    x, y = _affine_control_points()
+    spline = AkimaSpline(x, y)
+    vector_x = np.array([0.5, 1.5])
+
+    with pytest.raises(ValueError, match='Unrecognized option for extrapolation'):
+        cubic_call(0.5, spline.spline, 2)
+
+    with pytest.raises(ValueError, match='Unrecognized option for extrapolation'):
+        _jitted_cubic_call_scalar(0.5, spline.spline, 2)
+
+    with pytest.raises(ValueError, match='Unrecognized option for extrapolation'):
+        cubic_call(vector_x, spline.spline, 2)
+
+    with pytest.raises(ValueError, match='Unrecognized option for extrapolation'):
+        _jitted_cubic_call_vector(vector_x, spline.spline, 2)
+
+
+def test_cubic_call_rejects_unsupported_input_types_outside_numba() -> None:
     x, y = _affine_control_points()
     spline = AkimaSpline(x, y)
 
@@ -690,6 +737,12 @@ def test_cubic_call_rejects_non_float_scalar_and_non_array_inputs() -> None:
 
     with pytest.raises(TypeError):
         cubic_call([0.5, 1.5], spline.spline, 3)  # type: ignore[call-overload]
+
+    with pytest.raises(TypeError):
+        cubic_call(0.5, spline.spline, 3.0)  # type: ignore[call-overload]
+
+    with pytest.raises(TypeError):
+        cubic_call(0.5, 1.0, 3)  # type: ignore[call-overload]
 
     with pytest.raises(TypeError):
         spline(1)
