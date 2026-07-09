@@ -103,7 +103,8 @@ def _render(name: str, theme: dict[str, str]) -> None:
         ('akima', 1, theme['akima'], '--'),
         ('makima', 2, theme['makima'], '-'),
     )
-    with plt.rc_context(cast('Any', _rc(theme))):  # keys are dynamic strings, not the RcParams Literal
+    # rc keys are dynamic strings, not the RcParams key Literal, so cast past the check.
+    with plt.rc_context(cast(Any, _rc(theme))):  # noqa: TC006
         fig, (ax_top, ax_bot) = plt.subplots(2, 1, figsize=(9, 7.7), height_ratios=(3, 2), layout='constrained')
 
         cubic, makima, dot = theme['cubic'], theme['makima'], theme['dot']
