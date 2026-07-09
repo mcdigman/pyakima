@@ -856,7 +856,7 @@ def test_integer_control_arrays_are_accepted_without_integer_output_dtype_guaran
     xint = np.array([0.0, 0.5, 2.5, 4.0])
 
     helper_spline = akima_create_helper(x, y)  # type: ignore[arg-type]
-    object_spline = AkimaSpline(x, y, ext=0)  # type: ignore[arg-type]
+    object_spline = AkimaSpline(x, y, ext=0)
 
     np.testing.assert_array_equal(helper_spline.b, np.full(x.size - 1, 2.0))
     np.testing.assert_array_equal(helper_spline.c, np.zeros(x.size - 1))
