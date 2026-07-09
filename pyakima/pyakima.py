@@ -290,7 +290,10 @@ def cubic_call_scalar(xint: float, spline: SplineCoeffs, ext: int) -> float:
     spline : SplineCoeffs
         object representing the spline to evaluate.
     ext : int
-        flag selecting the method of bounds handling.
+        Boundary handling flag: 0 extrapolates, 1 returns zero outside the domain,
+        3 returns the boundary value, and 4 returns nan outside the domain. This follows
+        scipy spline ext values except ext=2 (raise on out-of-bounds) is not implemented,
+        and ext=4 is added for nan boundaries.
 
     Returns
     -------
@@ -363,7 +366,10 @@ def cubic_call_vector(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int
     spline : SplineCoeffs
         object representing the spline to evaluate.
     ext : int
-        flag selecting the method of bounds handling.
+        Boundary handling flag: 0 extrapolates, 1 returns zero outside the domain,
+        3 returns the boundary value, and 4 returns nan outside the domain. This follows
+        scipy spline ext values except ext=2 (raise on out-of-bounds) is not implemented,
+        and ext=4 is added for nan boundaries.
 
     Returns
     -------
@@ -481,7 +487,10 @@ def cubic_call(xint: float | NDArray[np.floating], spline: SplineCoeffs, ext: in
     spline : SplineCoeffs
         object representing the spline to evaluate.
     ext : int
-        flag selecting the method of bounds handling.
+        Boundary handling flag: 0 extrapolates, 1 returns zero outside the domain,
+        3 returns the boundary value, and 4 returns nan outside the domain. This follows
+        scipy spline ext values except ext=2 (raise on out-of-bounds) is not implemented,
+        and ext=4 is added for nan boundaries.
 
     Returns
     -------
@@ -548,7 +557,10 @@ def cubic_call_vector_linear(xint: NDArray[np.floating], spline: SplineCoeffs, e
     spline : SplineCoeffs
         object representing the spline to evaluate.
     ext : int
-        flag selecting the method of bounds handling.
+        Boundary handling flag: 0 extrapolates, 1 returns zero outside the domain,
+        3 returns the boundary value, and 4 returns nan outside the domain. This follows
+        scipy spline ext values except ext=2 (raise on out-of-bounds) is not implemented,
+        and ext=4 is added for nan boundaries.
 
     Returns
     -------
@@ -616,7 +628,10 @@ class AkimaSpline:
     y : NDArray[np.floating]
         values at the spline control points (size must match x).
     ext : int
-        flag for the extrapolation method.
+        Boundary handling flag: 0 extrapolates, 1 returns zero outside the domain,
+        3 returns the boundary value, and 4 returns nan outside the domain. This follows
+        scipy spline ext values except ext=2 (raise on out-of-bounds) is not implemented,
+        and ext=4 is added for nan boundaries.
     corner_model : int | str
         flag for the corner handling method. Current options are:
         0 or 'non-rounded' for the non-rounded method of Wodicka;
