@@ -493,6 +493,12 @@ def cubic_call(xint: float | NDArray[np.floating], spline: SplineCoeffs, ext: in
     TypeError
         if the type of xint is unsupported.
     """
+    if not isinstance(ext, int):
+        msg1 = 'Unsuported type of input: ' + str(type(ext))
+        raise TypeError(msg1)
+    if not isinstance(spline, SplineCoeffs):
+        msg2 = 'Unsuported type of input: ' + str(type(spline))
+        raise TypeError(msg2)
     # implement in the select function
     if isinstance(xint, np.ndarray):
         return cubic_call_vector(xint, spline, ext)
