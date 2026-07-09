@@ -6,6 +6,7 @@ objects defined:
 
 SplineCoeffs: namedtuple storing a spline
 AkimaSpline: python object managing creating and evaluating an akima spline
+akima_create_helper and cubic_call helpers: numba-compatible spline creation and evaluation
 
 """
 
@@ -90,6 +91,7 @@ def akima_create_helper(
         if corner_model is unrecognized
         if input sizes do not match
         if x is not monotonically increasing
+        if denom_small_cut is negative or non-finite
 
     Notes
     -----
@@ -264,7 +266,8 @@ def spline_single_knot_eval(
     Returns
     -------
     float | np.floating | NDArray[np.floating]
-        evaluated points of the same shape as xint; preserves input type for array inputs but scalars are cast to float
+        evaluated points of the same shape as xint; preserves input type for array inputs
+        but scalars are cast to float.
     """
     result: float | np.floating | NDArray[np.floating] = (
         spline.a[i]
@@ -500,7 +503,7 @@ def cubic_call(xint: float | NDArray[np.floating], spline: SplineCoeffs, ext: in
     Raises
     ------
     TypeError
-        if the type of xint is unsupported.
+        if the type of xint, spline, or ext is unsupported.
     """
     if not isinstance(ext, int):
         msg1 = 'Unsuported type of input: ' + str(type(ext))
@@ -627,6 +630,8 @@ class AkimaSpline:
         monotonically increasing spline control points (must be at least 5).
     y : NDArray[np.floating]
         values at the spline control points (size must match x).
+        Non-finite y are used in computations as-is and usually propagate to
+        nearby interpolated values.
     ext : int
         Boundary handling flag: 0 extrapolates, 1 returns zero outside the domain,
         3 returns the boundary value, and 4 returns nan outside the domain. This follows
@@ -639,15 +644,17 @@ class AkimaSpline:
         2 or 'makima' for the modified method with less overshoot (scipy method='makima').
     denom_small_cut : float
         cutoff in the denominator of the spline slopes, below which the spline has a corner.
+        The default nan selects a method-specific value.
     linear_vector_calls : int
-        affects only the speed of __call__, not the results.
-        If 1, linearly search the control points when evaluating at xint;
-        if 0, use a search assuming xint may be partly sorted (forward or reverse).
+        affects only the speed of __call__, not the results. If 1, evaluate vector
+        inputs with independent per-point searches; if 0, use a search assuming
+        xint may be partly sorted (forward or reverse).
 
     Raises
     ------
     ValueError
-        if the specified model parameters are unrecognized.
+        if the specified model parameters are unrecognized, the x/y inputs are invalid,
+        or denom_small_cut is negative or non-finite.
     """
 
     def __init__(
