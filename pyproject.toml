@@ -8,6 +8,50 @@ authors = [
 ]
 license = "Apache-2.0 WITH LLVM-exception"
 license-files = ["LICENSE"]
+# Trove classifiers (https://pypi.org/classifiers/). No "License ::" classifier is
+# listed: the license is declared as the PEP 639 SPDX expression above, which
+# setuptools>=77 (our build requirement) treats as the canonical source and for
+# which license classifiers are deprecated. "Implementation :: CPython" is a real
+# constraint -- numba does not support PyPy. The Python versions mirror
+# requires-python and the CI test matrix; "Typing :: Typed" reflects the shipped
+# py.typed marker.
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Typing :: Typed",
+]
+# Free-form PyPI search keywords (unvalidated, unlike classifiers). The name and
+# description are already indexed, so these lean toward distinctive synonyms
+# (makima, sub-spline) and the problem Akima solves (irregularly spaced data)
+# rather than repeating the summary. Application domains (e.g. gravitational-wave
+# / LISA PSD work) are intentionally left out here -- they belong in the README,
+# not in keywords, since the package itself is a general interpolation primitive.
+keywords = [
+    "akima",
+    "makima",
+    "spline",
+    "sub-spline",
+    "akima spline",
+    "interpolation",
+    "irregularly spaced data",
+    "irregular grid",
+    "numba",
+    "njit",
+    "jit",
+    "numerical",
+    "scientific computing",
+]
 # Utility package: keep the runtime floors low so it installs broadly. These
 # floors are also the "version-floor" end of the build matrix in
 # .github/workflows/build.yml (uv's lowest-direct resolution installs exactly
@@ -20,6 +64,15 @@ dependencies = [
     "numba>=0.56",
 ]
 requires-python = ">=3.10"
+
+# Only the GitHub repository is included: it is the source, homepage, and issue
+# tracker. There is no separate documentation site yet -- docs.yml builds the
+# Sphinx HTML but only uploads it as a CI artifact -- so no Documentation link
+# is listed until the docs are actually published somewhere.
+[project.urls]
+Homepage = "https://github.com/mcdigman/pyakima"
+Repository = "https://github.com/mcdigman/pyakima"
+Issues = "https://github.com/mcdigman/pyakima/issues"
 
 [project.optional-dependencies]
 # Development / test tooling. The linters and type-checkers here are also wired
