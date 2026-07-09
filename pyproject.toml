@@ -113,9 +113,6 @@ allow-init-docstring = true
 exclude = '\.git|\.tox|\.venv|\.eggs|_build|buck-out|build|dist|__pycache__|\.mypy_cache|\.pytest_cache|\.ruff_cache|pyakima/demos/'
 
 [tool.pytest.ini_options]
-# Real unit tests live in tests/. There are none yet -- the directory is a
-# placeholder so pytest has a target; the test.yml workflow treats "no tests
-# collected" as a pass until the first tests land.
 testpaths = ["tests"]
 
 [build-system]
