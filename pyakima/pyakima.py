@@ -263,7 +263,7 @@ def spline_single_knot_eval(
 
     Returns
     -------
-    float | NDArray[np.floating]
+    float | np.floating | NDArray[np.floating]
         evaluated points of the same shape as xint; preserves input type for array inputs but scalars are cast to float
     """
     result: float | np.floating | NDArray[np.floating] = (
