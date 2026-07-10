@@ -1,13 +1,14 @@
 # pyakima
 
-[![PyPI version](https://shields.io)](https://pypi.org)
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![DOI](https://zenodo.org/badge/972418978.svg)](https://zenodo.org/badge/latestdoi/972418978)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)<br>
 [![Test](https://github.com/mcdigman/pyakima/actions/workflows/test.yml/badge.svg)](https://github.com/mcdigman/pyakima/actions/workflows/test.yml)
 [![Coverage](https://github.com/mcdigman/pyakima/actions/workflows/coverage.yml/badge.svg)](https://github.com/mcdigman/pyakima/actions/workflows/coverage.yml)
 [![Typed](https://github.com/mcdigman/pyakima/actions/workflows/typecheck.yml/badge.svg)](https://github.com/mcdigman/pyakima/actions/workflows/typecheck.yml)
 [![Documentation Status](https://readthedocs.org/projects/pyakima/badge/?version=latest)](https://pyakima.readthedocs.io/en/latest/)
 
 
+<!-- doc:intro:start -->
 `pyakima` is a fast, JIT-compatible Akima spline implementation written in
 pure Python.
 
@@ -23,12 +24,14 @@ small:
 For jitted workloads,
 1. The spline interpolation itself is represented as a set of coefficients stored in a `SplineCoeffs` object, computed once via `akima_create_helper`.
 2. The spline is called from `cubic_call`, which selects the appropriate coefficients and evaluates the polynomial with `spline_single_knot_eval`.
+<!-- doc:intro:end -->
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/akima_demo_dark.gif">
   <img alt="Two-panel animation. Top: as one control point slides up and down, the pyakima makima curve hugs the data while a natural cubic spline rings above and below the spike. Bottom: a zoom on a sharp kink where the non-rounded, akima, and makima corner models round the corner by differing amounts." src="assets/akima_demo_light.gif">
 </picture>
 
+<!-- doc:corners:start -->
 The top panel slides one control point up and down: the pyakima `makima` fit
 stays local and flat on either side of the spike, while a natural cubic spline
 rings above and below it. The bottom panel zooms into a sharp kink to show the
@@ -40,18 +43,21 @@ three corner models `pyakima` exports:
 3. `makima` [Modified Akima Algorithm](https://www.mathworks.com/help/matlab/ref/makima.html) [^mak]; recommended default
    Less overshoot than `akima`, while mathematically guaranteed to preserve differentiability/continuous behavior at corners without special edge-case handling.
    Similar performance to `akima` in most cases.
+<!-- doc:corners:end -->
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/akima_grid_dark.gif">
   <img alt="Single panel animation. As the control points slide between a regular and irregular grid, the pyakima makima curve smoothly hugs the data, while the scipy default cubic spline oscillates so strongly it extends off the plotted y axis." src="assets/akima_grid_light.gif">
 </picture>
 
+<!-- doc:grid:start -->
 The control points oscillate smoothly between regular uniform-grid spacing and an inverse-CDF-based spacing.
 Such a spacing is similar to what might be used when using Akima splines for a PSD estimation task, or in approximating a function
 with sharp features with as few control points as possible. Such uses with irregular grids are a key modern application of Akima splines,
 and are of central importance to their utility in gravitational-wave detection applications, such as using trans-dimensional MCMC
 to adaptively fit Akima splines to un-modeled gravitational-wave sources [^bwv][^mag][^pak].
 Cubic splines, such as `scipy`'s default `CubicSpline` plotted above, oscillate wildly on the same irregularly-spaced grid, which typically makes them unsuitable for such analysis tasks.
+<!-- doc:grid:end -->
 
 ## Table of Contents
 
@@ -65,6 +71,7 @@ Cubic splines, such as `scipy`'s default `CubicSpline` plotted above, oscillate 
 - [Contributing](#contributing)
 - [License](#license)
 
+<!-- doc:install:start -->
 ## Installation
 
 ```bash
@@ -81,7 +88,9 @@ pip install "pyakima[demos]"
 Note that `pygsl_lite` from the `demos` dependencies may not always succeed on a `pip install`; any demo that uses it recovers gracefully if it cannot be imported.
 `pyakima.demos.speed_demo` can recover if _none_ of the `demos` dependencies are present.
 `pyakima.demos.step_demo` runs if only matplotlib is present.
+<!-- doc:install:end -->
 
+<!-- doc:quickstart:start -->
 ## Quick Start
 
 ```python
@@ -101,6 +110,7 @@ print(spline(np.linspace(-1.0, 11.0, 1000)))
 `AkimaSpline` is the ergonomic Python interface. The class stores a compiled
 coefficient bundle and dispatches scalar or vector evaluations to the fast
 helper functions.
+<!-- doc:quickstart:end -->
 
 ## Jitted Use
 
@@ -145,6 +155,7 @@ Boundary handling uses SciPy-like `ext` values:
 `ext=2` (raise on out-of-bounds) is not implemented. `ext=4` is added for
 NaN boundary handling. `AkimaSpline` defaults to `ext=3`.
 
+<!-- doc:regen:start -->
 ## Regenerating the Demo
 
 `pyakima.demos` ships as an example subpackage; run it from a source checkout so
@@ -156,8 +167,10 @@ python -m pyakima.demos.animate_demo       # writes assets/akima_demo_{light,dar
 python -m pyakima.demos.animate_grid_demo  # writes assets/akima_grid_{light,dark}.gif
 python -m pyakima.demos.step_demo          # writes assets/akima_step_{light,dark}.png
 ```
+<!-- doc:regen:end -->
 
 ## Performance Snapshot
+<!-- doc:perf:start -->
 
 Run `python -m pyakima.demos.speed_demo` to compare `pyakima` with the optional
 SciPy and `pygsl_lite` backends available in your environment.
@@ -187,6 +200,7 @@ scalar evaluation was about 109-361x faster than SciPy and 18-52x faster than `p
 
 Benchmark results depend on hardware, Python/NumPy/Numba versions, and whether
 the call is made through Python or entirely inside jitted code.
+<!-- doc:perf:end -->
 
 ## Quality Gates
 
@@ -232,6 +246,7 @@ python -m coverage report -m --fail-under=100
 full license text.
 
 
+<!-- doc:footnotes:start -->
 [^emu]: G. Engeln-Müllges & F. Uhlig, *Numerical Algorithms with C*, Springer, 1996, ch. 13 "Akima and Renner Subsplines," Algorithm 13.1. ISBN 978-3-642-64682-9.
 [^num]: Note: the internals of the GSL implementation have never been viewed by the repository author. However, calls to GSL exhibit near-identical behavior, supporting that the issue is algorithmic rather than due to implementation error.
 [^aki]: Akima, Hiroshi. "A new method of interpolation and smooth curve fitting based on local procedures." Journal of the ACM (JACM) , 17.4, 1970, pp. 589–602.
@@ -240,3 +255,4 @@ full license text.
 [^bwv]: Detecting gravitational wave signals using a flexible model for the amplitude and frequency evolution. T Gupta, NJ Cornish. Physical Review D, 2024•APS [arXiv:2404.11719](https://arxiv.org/abs/2404.11719).
 [^mag]: Model-agnostic gravitational-wave background characterization algorithm. T Knapp, PM Meyers, AI Renzini.Physical Review D, 2025•APS. [arXiv:2507.08095](https://arxiv.org/abs/2507.08095)
 [^pak]: “Precise analysis of gravitational waves from binary neutron star coalescence using Hilbert–Huang transform based on Akima spline interpolation.” Yoda, Itsuki et al. Progress of Theoretical and Experimental Physics (2023). [DOI:10.1093/ptep/ptad101](https://doi.org/10.1093/ptep%2Fptad101)
+<!-- doc:footnotes:end -->

@@ -1,0 +1,38 @@
+/* Light/dark image switching that follows Furo's theme toggle.
+ *
+ * The README uses a <picture> element keyed off the OS prefers-color-scheme
+ * media feature. Furo instead exposes a manual light/dark toggle by setting a
+ * body[data-theme] attribute ("light", "dark", or "auto"), so a <picture>
+ * would desync from that toggle. These rules pair with .only-light/.only-dark
+ * <img> tags in the docs pages to track Furo's toggle instead.
+ *
+ * Default (covers data-theme="light" and data-theme="auto" on a light OS):
+ * show the light image, hide the dark one.
+ */
+.only-light {
+  display: block;
+}
+
+.only-dark {
+  display: none;
+}
+
+/* Explicit dark toggle. */
+body[data-theme="dark"] .only-light {
+  display: none;
+}
+
+body[data-theme="dark"] .only-dark {
+  display: block;
+}
+
+/* "auto" mode on a dark OS. */
+@media (prefers-color-scheme: dark) {
+  body[data-theme="auto"] .only-light {
+    display: none;
+  }
+
+  body[data-theme="auto"] .only-dark {
+    display: block;
+  }
+}
