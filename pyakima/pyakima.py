@@ -109,19 +109,19 @@ def akima_create_helper(
     """
     # enforce required conditions
     if x.ndim != 1:
-        msg3 = 'x and y must be one-dimensional'
-        raise ValueError(msg3)
+        msg1 = 'x and y must be one-dimensional'
+        raise ValueError(msg1)
     if y.ndim != 1:
-        msg3 = 'x and y must be one-dimensional'
-        raise ValueError(msg3)
-    if y.shape != x.shape:
-        msg2 = 'Input shapes must match'
+        msg2 = 'x and y must be one-dimensional'
         raise ValueError(msg2)
+    if y.shape != x.shape:
+        msg3 = 'Input shapes must match'
+        raise ValueError(msg3)
 
     n_control: int = x.size
     if n_control < 5:
-        msg1 = 'Need at least 5 control points'
-        raise ValueError(msg1)
+        msg4 = 'Need at least 5 control points'
+        raise ValueError(msg4)
 
     # get the input precision
     dtype = x.dtype
@@ -133,8 +133,8 @@ def akima_create_helper(
         # calculate the difference
         diff_x = x[itrx + 1] - x[itrx]
         if not diff_x > 0.0:
-            msg3 = 'x must be monotonically increasing'
-            raise ValueError(msg3)
+            msg5 = 'x must be monotonically increasing'
+            raise ValueError(msg5)
         diff_y = y[itrx + 1] - y[itrx]
         m[2 + itrx] = diff_y / diff_x
 
@@ -161,8 +161,8 @@ def akima_create_helper(
         sharp_corners = False
         # denom_small_cut should be zero to match makima
     else:
-        msg4 = 'Unrecognized option for corner model'
-        raise ValueError(msg4)
+        msg6 = 'Unrecognized option for corner model'
+        raise ValueError(msg6)
 
     t_left = np.zeros(n_control, dtype=dtype)  # left sided slopes
     t_right = np.zeros(
@@ -202,8 +202,8 @@ def akima_create_helper(
         if denom_small_cut == 0.0:
             denom_cut_loc = 0.0
         elif ~np.isfinite(denom_small_cut) or denom_small_cut < 0:
-            msg5 = 'denom_small_cut must be non-negative and finite'
-            raise ValueError(msg5)
+            msg7 = 'denom_small_cut must be non-negative and finite'
+            raise ValueError(msg7)
         else:
             denom_cut_loc = denom_small_cut * dm2
 
