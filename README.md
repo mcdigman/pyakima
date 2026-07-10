@@ -1,5 +1,6 @@
 # pyakima
 
+[![PyPI](https://img.shields.io/pypi/v/pyakima.svg)](https://pypi.org/project/pyakima/)
 [![DOI](https://zenodo.org/badge/972418978.svg)](https://zenodo.org/badge/latestdoi/972418978)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)<br>
 [![Test](https://github.com/mcdigman/pyakima/actions/workflows/test.yml/badge.svg)](https://github.com/mcdigman/pyakima/actions/workflows/test.yml)
@@ -180,7 +181,7 @@ python -m pyakima.demos.step_demo          # writes assets/akima_step_{light,dar
 Run `python -m pyakima.demos.speed_demo` to compare `pyakima` with the optional
 SciPy and `pygsl_lite` backends available in your environment.
 
-The current release-candidate snapshot was measured on a single Apple Silicon M3 core with
+The current 0.1.0 snapshot was measured on a single Apple Silicon M3 core with
 Python 3.14.6, Numba 0.66.0, NumPy 2.4.6, SciPy 1.17.1, and `pygsl_lite`
 0.1.8. The demo used 50 repeats, with each repeat adaptively looped to at least
 0.100 s, and a representative range of spline and caller sizes.

@@ -1,6 +1,6 @@
 [project]
 name = "pyakima"
-version = "0.1.0rc1"
+version = "0.1.0"
 description = "Fast, Numba-compatible Akima/makima spline interpolation for regular and irregular grids"
 readme = "README.md"
 authors = [
