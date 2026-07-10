@@ -1,6 +1,6 @@
 # pyakima
 
-[![DOI](https://zenodo.org/badge/mcdigman/pyakima.svg)](https://zenodo.org/badge/latestdoi/mcdigman/pyakima)
+[![DOI](https://zenodo.org/badge/972418978.svg)](https://zenodo.org/badge/latestdoi/972418978)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)<br>
 [![Test](https://github.com/mcdigman/pyakima/actions/workflows/test.yml/badge.svg)](https://github.com/mcdigman/pyakima/actions/workflows/test.yml)
 [![Coverage](https://github.com/mcdigman/pyakima/actions/workflows/coverage.yml/badge.svg)](https://github.com/mcdigman/pyakima/actions/workflows/coverage.yml)
