@@ -153,7 +153,7 @@ def _typed_affine_spline(dtype: type[np.floating]) -> SplineCoeffs:
 
 
 @njit()
-def _jitted_cubic_call_scalar(xint: float, spline: SplineCoeffs, ext: int) -> float:
+def _jitted_cubic_call_scalar(xint: float | np.floating | np.integer, spline: SplineCoeffs, ext: int) -> float:
     return cubic_call(xint, spline, ext)
 
 
@@ -969,24 +969,52 @@ def test_cubic_call_invalid_ext_matches_numba_overload_for_scalar_and_vector_inp
         _jitted_cubic_call_vector(vector_x, spline.spline, 2)
 
 
+@pytest.mark.parametrize('integer_x', [1, np.int32(1), np.int64(1)])
+def test_cubic_call_integer_scalar_inputs_match_same_float_outside_numba(integer_x: int | np.integer) -> None:
+    x, y = _nonlinear_control_points()
+    spline = AkimaSpline(x, y)
+    float_x = float(integer_x)
+
+    _assert_same_float_values(
+        cubic_call(integer_x, spline.spline, 3),
+        cubic_call(float_x, spline.spline, 3),
+        maxulp=0,
+    )
+    _assert_same_float_values(
+        spline(integer_x),
+        spline(float_x),
+        maxulp=0,
+    )
+
+
+@pytest.mark.parametrize('integer_x', [1, np.int32(1), np.int64(1)])
+def test_cubic_call_integer_scalar_inputs_match_same_float_under_numba(integer_x: int | np.integer) -> None:
+    x, y = _nonlinear_control_points()
+    spline = AkimaSpline(x, y)
+    float_x = float(integer_x)
+
+    _assert_same_float_values(
+        _jitted_cubic_call_scalar(integer_x, spline.spline, 3),
+        _jitted_cubic_call_scalar(float_x, spline.spline, 3),
+        maxulp=0,
+    )
+
+
 def test_cubic_call_rejects_unsupported_input_types_outside_numba() -> None:
     x, y = _affine_control_points()
     spline = AkimaSpline(x, y)
 
     with pytest.raises(TypeError):
-        cubic_call(1, spline.spline, 3)
+        cubic_call([0.5, 1.5], spline.spline, 3)  # type: ignore[call-overload]
 
     with pytest.raises(TypeError):
-        cubic_call([0.5, 1.5], spline.spline, 3)  # type: ignore[call-overload]
+        cubic_call(0.5 + 0.0j, spline.spline, 3)  # type: ignore[call-overload]
 
     with pytest.raises(TypeError):
         cubic_call(0.5, spline.spline, 3.0)  # type: ignore[call-overload]
 
     with pytest.raises(TypeError):
         cubic_call(0.5, 1.0, 3)  # type: ignore[call-overload]
-
-    with pytest.raises(TypeError):
-        spline(1)
 
 
 def test_numba_overload_rejects_non_integer_ext_type() -> None:
@@ -1015,11 +1043,11 @@ def test_numba_overload_rejects_unsupported_xint_type() -> None:
     spline = AkimaSpline(x, y)
 
     @njit()
-    def call_with_integer_xint(spline_coeffs: SplineCoeffs) -> float:
-        return cubic_call(1, spline_coeffs, 3)
+    def call_with_complex_xint(spline_coeffs: SplineCoeffs) -> float:
+        return cubic_call(1.0 + 0.0j, spline_coeffs, 3)  # type: ignore[call-overload, no-any-return]
 
     with pytest.raises((TypeError, TypingError), match='Unsupported type of input'):
-        call_with_integer_xint(spline.spline)
+        call_with_complex_xint(spline.spline)
 
 
 @pytest.mark.parametrize(
