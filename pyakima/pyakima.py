@@ -1,6 +1,6 @@
+# SPDX-FileCopyrightText: Copyright 2026 Matthew C. Digman
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 """Python Akima Spline Implementation.
-
-Copyright 2026 Matthew C. Digman
 
 objects defined:
 

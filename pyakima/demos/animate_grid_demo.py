@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: Copyright 2026 Matthew C. Digman
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 """Render light and dark animated GIFs showing pyakima interpolation on irregular grids.
 
 A single panel draws the reference function ``f(x) = 100 exp(-x**8 / 10) + x**2``
@@ -21,9 +23,6 @@ Run from a source checkout::
 
     pip install -e '.[demos]'                      # scipy, matplotlib, pygsl_lite
     python -m pyakima.demos.animate_grid_demo      # writes assets/akima_grid_*.gif
-
-Copyright 2026 Matthew C. Digman
-
 """
 
 from typing import Any, cast
