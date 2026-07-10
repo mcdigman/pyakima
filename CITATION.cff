@@ -1,0 +1,33 @@
+# Citation metadata (https://citation-file-format.github.io/). GitHub renders
+# this as the repository's "Cite this repository" entry, and Zenodo uses it as
+# the deposition metadata when archiving GitHub releases.
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata from this file."
+type: software
+title: "pyakima"
+version: 0.1.0rc1
+date-released: 2026-07-10
+abstract: "Fast, Numba-compatible Akima/makima spline interpolation for regular and irregular grids"
+authors:
+  - family-names: "Digman"
+    given-names: "Matthew C."
+    orcid: "https://orcid.org/0000-0003-3815-7065"
+    email: "matthew.digman@vanderbilt.edu"
+license: Apache-2.0
+repository-code: "https://github.com/mcdigman/pyakima"
+url: "https://pyakima.readthedocs.io/en/latest/"
+keywords:
+  - akima
+  - makima
+  - spline
+  - cubic spline
+  - modified akima
+  - piecewise cubic interpolation
+  - interpolation
+  - curve fitting
+  - irregular grid
+  - numba
+  - scientific computing
+  - gravitational waves
+  - LISA
+  - power spectral density

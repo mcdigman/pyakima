@@ -1,0 +1,66 @@
+pyakima speed demo
+python 3.14.6 | numba 0.66.0 | numpy 2.4.6
+median of 50 repeats; each repeat is adaptively looped to at least 0.100 s
+all pyakima jitted call paths are warmed once with matching arguments
+evaluation tables hide Python dispatch/class overhead; pass --show-overhead to include it
+evaluation tables use gsl-style and makima-backed scipy-style rows; pass --show-all-call-models for all models
+scalar fn is one Python call per point; scalar jit loops over the same points inside njit and is excluded from py-call speedup
+fully-jitted speedup compares alternate backends with njit caller timings
+
+Optional backend availability
+backend     status
+----------  ----------------
+pyakima     available
+scipy       available 1.17.1
+pygsl_lite  available 0.1.8
+
+Spline creation time per spline
+model         n_ctrl  class      helper     alt time   py speedup
+------------  ------  ---------  ---------  ---------  ----------
+gsl-style     5         3.24 us    1.65 us    1.04 us    0.63x
+gsl-style     64        3.58 us    2.11 us    1.42 us    0.68x
+gsl-style     4096     21.52 us   17.70 us   15.70 us    0.89x
+scipy akima   5         3.09 us    1.63 us   51.83 us   31.78x
+scipy akima   64        3.76 us    2.11 us   52.82 us   25.01x
+scipy akima   4096     22.81 us   19.40 us  110.06 us    5.67x
+scipy makima  5         3.14 us    1.66 us   54.21 us   32.63x
+scipy makima  64        3.62 us    2.12 us   55.26 us   26.01x
+scipy makima  4096     23.83 us   20.38 us  118.60 us    5.82x
+
+Scalar call time per scalar (257-point grid average)
+model        n_ctrl  scalar fn  scalar jit  alt time   py-call speedup  fully-jitted speedup
+-----------  ------  ---------  ----------  ---------  ---------------  --------------------
+gsl-style    5        902.6 ns     5.8 ns    299.8 ns    0.33x           51.50x
+gsl-style    64       877.4 ns     9.5 ns    298.6 ns    0.34x           31.30x
+gsl-style    4096     926.3 ns    19.4 ns    340.2 ns    0.37x           17.51x
+scipy-style  5        885.6 ns     5.7 ns     2.07 us    2.34x          361.27x
+scipy-style  64       879.2 ns     9.7 ns     2.08 us    2.37x          215.90x
+scipy-style  4096     927.8 ns    19.6 ns     2.14 us    2.30x          108.95x
+
+Vector call time per call
+model        n_ctrl  n_eval  vector fn  linear fn  cubic_call jit  alt time   py speedup  fully-jitted speedup
+-----------  ------  ------  ---------  ---------  --------------  ---------  ----------  --------------------
+gsl-style    5       8         1.10 us    1.12 us    67.9 ns        376.7 ns    0.34x       5.54x
+gsl-style    5       1000      3.08 us    3.74 us    2.16 us         5.03 us    1.63x       2.32x
+gsl-style    5       10000    20.58 us   26.00 us   20.38 us        46.61 us    2.26x       2.29x
+gsl-style    5       100000  193.26 us  241.90 us  192.74 us       454.96 us    2.35x       2.36x
+gsl-style    64      8         1.13 us    1.14 us    88.9 ns        508.7 ns    0.45x       5.72x
+gsl-style    64      1000      3.19 us    7.35 us    2.32 us         6.39 us    2.01x       2.76x
+gsl-style    64      10000    21.47 us   67.90 us   21.05 us        48.16 us    2.24x       2.29x
+gsl-style    64      100000  199.73 us  614.17 us  201.08 us       460.23 us    2.30x       2.29x
+gsl-style    4096    8         2.27 us    1.20 us    1.22 us        724.8 ns    0.60x       0.59x
+gsl-style    4096    1000      5.05 us   16.38 us    4.04 us        45.03 us    8.91x      11.15x
+gsl-style    4096    10000    23.34 us  147.12 us   22.72 us       187.80 us    8.05x       8.27x
+gsl-style    4096    100000  213.88 us    1.48 ms  212.71 us       631.68 us    2.95x       2.97x
+scipy-style  5       8         1.10 us    1.11 us    68.9 ns         2.00 us    1.81x      28.98x
+scipy-style  5       1000      3.13 us    3.74 us    2.20 us         6.78 us    2.16x       3.07x
+scipy-style  5       10000    20.67 us   25.46 us   20.49 us        47.60 us    2.30x       2.32x
+scipy-style  5       100000  194.98 us  235.58 us  194.19 us       454.65 us    2.33x       2.34x
+scipy-style  64      8         1.13 us    1.14 us    88.7 ns         2.10 us    1.86x      23.65x
+scipy-style  64      1000      3.26 us    7.54 us    2.32 us         7.73 us    2.37x       3.33x
+scipy-style  64      10000    21.77 us   68.24 us   21.70 us        50.59 us    2.32x       2.33x
+scipy-style  64      100000  203.02 us  623.74 us  202.70 us       453.04 us    2.23x       2.24x
+scipy-style  4096    8         2.29 us    1.23 us    1.23 us         2.13 us    1.72x       1.73x
+scipy-style  4096    1000      5.07 us   16.35 us    4.08 us        24.20 us    4.78x       5.93x
+scipy-style  4096    10000    23.76 us  151.73 us   23.53 us       112.11 us    4.72x       4.76x
+scipy-style  4096    100000  218.15 us    1.50 ms  216.63 us       527.95 us    2.42x       2.44x
