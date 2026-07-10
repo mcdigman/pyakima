@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pytest
 from numba import njit
+from numba.core.errors import TypingError
 
 from pyakima.pyakima import (
     AkimaSpline,
@@ -911,7 +912,7 @@ def test_numba_overload_rejects_non_integer_ext_type() -> None:
     def call_with_float_ext(xint: float, spline_coeffs: SplineCoeffs) -> float:
         return cubic_call(xint, spline_coeffs, 3.0)  # type: ignore[call-overload, no-any-return]
 
-    with pytest.raises(TypeError, match='Unsuported type of input'):
+    with pytest.raises((TypeError, TypingError), match='Unsuported type of input'):
         call_with_float_ext(0.5, spline.spline)
 
 
@@ -920,7 +921,7 @@ def test_numba_overload_rejects_non_spline_type() -> None:
     def call_with_float_spline(xint: float) -> float:
         return cubic_call(xint, 1.0, 3)  # type: ignore[call-overload, no-any-return]
 
-    with pytest.raises(TypeError, match='Unsuported type of input'):
+    with pytest.raises((TypeError, TypingError), match='Unsuported type of input'):
         call_with_float_spline(0.5)
 
 
@@ -932,7 +933,7 @@ def test_numba_overload_rejects_unsupported_xint_type() -> None:
     def call_with_integer_xint(spline_coeffs: SplineCoeffs) -> float:
         return cubic_call(1, spline_coeffs, 3)
 
-    with pytest.raises(TypeError, match='Unsuported type of input'):
+    with pytest.raises((TypeError, TypingError), match='Unsuported type of input'):
         call_with_integer_xint(spline.spline)
 
 
