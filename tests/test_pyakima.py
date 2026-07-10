@@ -714,25 +714,28 @@ def test_irregular_grid_evaluating_exactly_at_knots_returns_control_values(
     _assert_same_float_values(spline(x), y, maxulp=4)
 
 
-def test_last_knot_evaluation_returns_control_value_exactly_with_large_coefficients() -> None:
-    scale = np.ldexp(1.0, 1000)
-    x = np.arange(5, dtype=np.float64)
-    y = scale * np.array([0.0, 1.0, -1.0, 2.0, -3.0])
+def test_finite_grid_extension_preserves_nonfinite_last_knot_evaluation() -> None:
+    x = np.array([-0.6, -0.3, 0.0, 0.3, 0.6])
+    y = np.array([-0.51082562, -1.2039728, -np.inf, -1.2039728, -0.51082562])
     x_last = float(x[-1])
     x_last_vector = np.array([x_last])
-    expected = np.array([y[-1]])
+    expected = np.array([np.nan])
 
-    spline = AkimaSpline(x, y, ext=4)
-    linear_spline = AkimaSpline(x, y, ext=4, linear_vector_calls=1)
+    extended_x = np.append(x, 0.9)
+    extended_y = np.append(y, 0.0)
 
-    _assert_same_float_values(cubic_call_scalar(x_last, spline.spline, 4), y[-1], maxulp=0)
-    _assert_same_float_values(cubic_call_vector(x_last_vector, spline.spline, 4), expected, maxulp=0)
-    _assert_same_float_values(cubic_call_vector_linear(x_last_vector, spline.spline, 4), expected, maxulp=0)
-    _assert_same_float_values(cubic_call(x_last, spline.spline, 4), y[-1], maxulp=0)
-    _assert_same_float_values(cubic_call(x_last_vector, spline.spline, 4), expected, maxulp=0)
-    _assert_same_float_values(spline(x_last), y[-1], maxulp=0)
-    _assert_same_float_values(spline(x_last_vector), expected, maxulp=0)
-    _assert_same_float_values(linear_spline(x_last_vector), expected, maxulp=0)
+    for control_x, control_y in [(x, y), (extended_x, extended_y)]:
+        spline = AkimaSpline(control_x, control_y, ext=4)
+        linear_spline = AkimaSpline(control_x, control_y, ext=4, linear_vector_calls=1)
+
+        _assert_same_float_values(cubic_call_scalar(x_last, spline.spline, 4), np.nan, maxulp=0)
+        _assert_same_float_values(cubic_call_vector(x_last_vector, spline.spline, 4), expected, maxulp=0)
+        _assert_same_float_values(cubic_call_vector_linear(x_last_vector, spline.spline, 4), expected, maxulp=0)
+        _assert_same_float_values(cubic_call(x_last, spline.spline, 4), np.nan, maxulp=0)
+        _assert_same_float_values(cubic_call(x_last_vector, spline.spline, 4), expected, maxulp=0)
+        _assert_same_float_values(spline(x_last), np.nan, maxulp=0)
+        _assert_same_float_values(spline(x_last_vector), expected, maxulp=0)
+        _assert_same_float_values(linear_spline(x_last_vector), expected, maxulp=0)
 
 
 @pytest.mark.parametrize(
