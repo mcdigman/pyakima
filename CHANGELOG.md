@@ -4,9 +4,9 @@ Notable changes to `pyakima`. The format loosely follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
-## [0.1.0rc1] - 2026-07-10
+## [0.1.0] - 2026-07-10
 
-First public release candidate.
+First public release.
 
 ### Added
 
@@ -22,4 +22,4 @@ First public release candidate.
 - Sphinx documentation site, runnable demo subpackage (`pyakima.demos`), and a
   cross-backend speed benchmark.
 
-[0.1.0rc1]: https://github.com/mcdigman/pyakima/releases/tag/v0.1.0rc1
+[0.1.0]: https://github.com/mcdigman/pyakima/releases/tag/v0.1.0
