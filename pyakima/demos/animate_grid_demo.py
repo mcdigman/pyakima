@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: Copyright 2026 Matthew C. Digman
-# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# SPDX-License-Identifier: Apache-2.0
 """Render light and dark animated GIFs showing pyakima interpolation on irregular grids.
 
 A single panel draws the reference function ``f(x) = 100 exp(-x**8 / 10) + x**2``

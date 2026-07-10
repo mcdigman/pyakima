@@ -28,6 +28,7 @@ uniform and irregular grids.
 :caption: Contents
 :hidden:
 
+usage
 api
 examples
 performance

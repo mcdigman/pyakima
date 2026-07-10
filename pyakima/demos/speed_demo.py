@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: Copyright 2026 Matthew C. Digman
-# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# SPDX-License-Identifier: Apache-2.0
 """Demonstrate pyakima timing against optional alternate implementations."""
 
 from __future__ import annotations

@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: Copyright 2026 Matthew C. Digman
-# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# SPDX-License-Identifier: Apache-2.0
 """Python Akima Spline Implementation.
 
 objects defined:
@@ -554,27 +554,27 @@ def cubic_call(xint: float | NDArray[np.floating], spline: SplineCoeffs, ext: in
         if the type of xint, spline, or ext is unsupported.
     """
     if not isinstance(ext, int):
-        msg1 = 'Unsuported type of input: ' + str(type(ext))
+        msg1 = 'Unsupported type of input: ' + str(type(ext))
         raise TypeError(msg1)
     if not isinstance(spline, SplineCoeffs):
-        msg2 = 'Unsuported type of input: ' + str(type(spline))
+        msg2 = 'Unsupported type of input: ' + str(type(spline))
         raise TypeError(msg2)
     # implement in the select function
     if isinstance(xint, np.ndarray):
         return cubic_call_vector(xint, spline, ext)
     if isinstance(xint, (float, np.floating, numba.core.types.Float)):
         return cubic_call_scalar(xint, spline, ext)
-    msg = 'Unsuported type of input'
+    msg = 'Unsupported type of input'
     raise TypeError(msg)
 
 
 @numba.extending.overload(cubic_call)
 def _select_cubic_call(xint, spline, ext):  # type: ignore[no-untyped-def] # noqa: ANN001, ANN202 # skylos: ignore[SKY-U002] # pragma: no cover
     if not isinstance(ext, numba.core.types.Integer):
-        msg1 = 'Unsuported type of input: ' + str(type(ext))
+        msg1 = 'Unsupported type of input: ' + str(type(ext))
         raise TypeError(msg1)
     if not isinstance(spline, numba.core.types.NamedTuple):
-        msg2 = 'Unsuported type of input: ' + str(type(spline))
+        msg2 = 'Unsupported type of input: ' + str(type(spline))
         raise TypeError(msg2)
     if isinstance(xint, numba.core.types.Float):
 
@@ -585,7 +585,7 @@ def _select_cubic_call(xint, spline, ext):  # type: ignore[no-untyped-def] # noq
         def temp(xint, spline, ext):  # type: ignore[no-untyped-def] # noqa: ANN001, ANN202
             return cubic_call_vector(xint, spline, ext)
     else:
-        msg3 = 'Unsuported type of input: ' + str(type(xint))
+        msg3 = 'Unsupported type of input: ' + str(type(xint))
         raise TypeError(msg3)
     return temp
 

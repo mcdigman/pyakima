@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: Copyright 2026 Matthew C. Digman
-# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# SPDX-License-Identifier: Apache-2.0
 """Shared light/dark presets and helpers for the pyakima.demos animations.
 
 Centralises the colorblind-safe (Okabe-Ito) palette, the Matplotlib rc overrides

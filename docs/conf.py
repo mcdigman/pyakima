@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: Copyright 2026 Matthew C. Digman
-# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# SPDX-License-Identifier: Apache-2.0
 """Sphinx configuration for the pyakima HTML documentation build.
 
 Run locally with ``make -C docs html`` (or ``sphinx-build -b html docs
@@ -11,7 +11,7 @@ from importlib.metadata import version as _version
 # -- Project information -----------------------------------------------------
 project = 'pyakima'
 author = 'Matthew C. Digman'
-copyright = '2025-2026, Matthew C. Digman'  # noqa: A001 - Sphinx-mandated name
+copyright = '2026, Matthew C. Digman'  # noqa: A001 - Sphinx-mandated name
 
 # The full version (e.g. 0.1.0rc1) is read from the installed distribution so
 # it stays in lockstep with [project].version in pyproject.toml, the same

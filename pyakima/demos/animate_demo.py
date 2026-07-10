@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: Copyright 2026 Matthew C. Digman
-# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# SPDX-License-Identifier: Apache-2.0
 """Render light and dark animated GIFs showcasing pyakima against a cubic spline.
 
 Top panel: a control point slides up and down, contrasting the pyakima makima
