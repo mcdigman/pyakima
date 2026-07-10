@@ -153,7 +153,7 @@ def _typed_affine_spline(dtype: type[np.floating]) -> SplineCoeffs:
 
 
 @njit()
-def _jitted_cubic_call_scalar(xint: float | np.floating | np.integer, spline: SplineCoeffs, ext: int) -> float:
+def _jitted_cubic_call_scalar(xint: float | np.floating, spline: SplineCoeffs, ext: int) -> float:
     return cubic_call(xint, spline, ext)
 
 
@@ -976,12 +976,12 @@ def test_cubic_call_integer_scalar_inputs_match_same_float_outside_numba(integer
     float_x = float(integer_x)
 
     _assert_same_float_values(
-        cubic_call(integer_x, spline.spline, 3),
+        cubic_call(integer_x, spline.spline, 3),  # type: ignore[arg-type]
         cubic_call(float_x, spline.spline, 3),
         maxulp=0,
     )
     _assert_same_float_values(
-        spline(integer_x),
+        spline(integer_x),  # type: ignore[arg-type]
         spline(float_x),
         maxulp=0,
     )
@@ -994,7 +994,7 @@ def test_cubic_call_integer_scalar_inputs_match_same_float_under_numba(integer_x
     float_x = float(integer_x)
 
     _assert_same_float_values(
-        _jitted_cubic_call_scalar(integer_x, spline.spline, 3),
+        _jitted_cubic_call_scalar(integer_x, spline.spline, 3),  # type: ignore[arg-type]
         _jitted_cubic_call_scalar(float_x, spline.spline, 3),
         maxulp=0,
     )

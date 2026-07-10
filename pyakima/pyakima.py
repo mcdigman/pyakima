@@ -252,12 +252,12 @@ def akima_create_helper(
 
 
 @overload
-def spline_single_knot_eval(xint: float | np.floating | np.integer, spline: SplineCoeffs, i: int) -> float: ...
+def spline_single_knot_eval(xint: float | np.floating, spline: SplineCoeffs, i: int) -> float: ...
 @overload
 def spline_single_knot_eval(xint: NDArray[np.floating], spline: SplineCoeffs, i: int) -> NDArray[np.floating]: ...
 @njit()
 def spline_single_knot_eval(
-    xint: float | np.floating | np.integer | NDArray[np.floating], spline: SplineCoeffs, i: int
+    xint: float | np.floating | NDArray[np.floating], spline: SplineCoeffs, i: int
 ) -> float | np.floating | NDArray[np.floating]:
     """
     Evaluate the spline from the values at the knot point with index i.
@@ -266,7 +266,7 @@ def spline_single_knot_eval(
 
     Parameters
     ----------
-    xint : float | int | np.floating | np.integer | NDArray[np.floating]
+    xint : float | np.floating | NDArray[np.floating]
         scalar or array of any shape containing x values at which to evaluate the spline.
     spline : SplineCoeffs
         object representing the spline to evaluate.
@@ -289,7 +289,7 @@ def spline_single_knot_eval(
 
 
 @njit()
-def cubic_call_scalar(xint: float | np.floating | np.integer, spline: SplineCoeffs, ext: int) -> float:
+def cubic_call_scalar(xint: float | np.floating, spline: SplineCoeffs, ext: int) -> float:
     """
     Call cubic spline with a scalar.
 
@@ -298,7 +298,7 @@ def cubic_call_scalar(xint: float | np.floating | np.integer, spline: SplineCoef
 
     Parameters
     ----------
-    xint : float | int | np.floating | np.integer
+    xint : float | np.floating
         scalar point at which to evaluate the spline.
     spline : SplineCoeffs
         object representing the spline to evaluate.
@@ -508,11 +508,11 @@ def cubic_call_vector(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int
 
 
 @overload
-def cubic_call(xint: float | np.floating | np.integer, spline: SplineCoeffs, ext: int) -> float: ...
+def cubic_call(xint: float | np.floating, spline: SplineCoeffs, ext: int) -> float: ...
 @overload
 def cubic_call(xint: NDArray[np.floating], spline: SplineCoeffs, ext: int) -> NDArray[np.floating]: ...
 def cubic_call(
-    xint: float | np.floating | np.integer | NDArray[np.floating], spline: SplineCoeffs, ext: int
+    xint: float | np.floating | NDArray[np.floating], spline: SplineCoeffs, ext: int
 ) -> float | NDArray[np.floating]:
     """
     Evaluate akima splines with scalar or vector input.
@@ -534,7 +534,7 @@ def cubic_call(
 
     Parameters
     ----------
-    xint : float | int | np.floating | np.integer | NDArray[np.floating]
+    xint : float | np.floating | NDArray[np.floating]
         scalar or C- or Fortran-contiguous array of any shape containing points at which to
         evaluate the spline. Non-contiguous array layouts are not part of the public contract.
     spline : SplineCoeffs
@@ -564,7 +564,9 @@ def cubic_call(
     # implement in the select function
     if isinstance(xint, np.ndarray):
         return cubic_call_vector(xint, spline, ext)
-    if isinstance(xint, (float, np.floating, int, np.integer, numba.core.types.Float, numba.core.types.Integer)):
+    # NOTE: integers are included for the sake of not causing a TypeError at runtime,
+    # but production code typically shouldn't be doing that intentionally, so integers deliberately aren't annotated.
+    if isinstance(xint, (float, np.floating, int, np.integer)):
         return cubic_call_scalar(xint, spline, ext)
     msg = 'Unsupported type of input'
     raise TypeError(msg)
@@ -802,16 +804,16 @@ class AkimaSpline:
         )
 
     @overload
-    def __call__(self, xint: float | np.floating | np.integer) -> float: ...
+    def __call__(self, xint: float | np.floating) -> float: ...
     @overload
     def __call__(self, xint: NDArray[np.floating]) -> NDArray[np.floating]: ...
-    def __call__(self, xint: float | np.floating | np.integer | NDArray[np.floating]) -> float | NDArray[np.floating]:
+    def __call__(self, xint: float | np.floating | NDArray[np.floating]) -> float | NDArray[np.floating]:
         """
         Call the akima spline object.
 
         Parameters
         ----------
-        xint : float | int | np.floating | np.integer | NDArray[np.floating]
+        xint : float | np.floating | NDArray[np.floating]
             scalar or C- or Fortran-contiguous array of any shape containing points at which
             to evaluate the spline. Non-contiguous array layouts are not part of the public
             contract.
