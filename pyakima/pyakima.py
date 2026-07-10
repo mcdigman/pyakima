@@ -342,8 +342,6 @@ def cubic_call_scalar(xint: float, spline: SplineCoeffs, ext: int) -> float:
         return y_bound_low
     if xint > spline.x[-1] and ext != 0:
         return y_bound_high
-    if xint == spline.x[-1]:
-        return float(spline.y[-1])
 
     # find the proper subspline
     # locate the enclosing subspline directly with a binary search
@@ -430,11 +428,6 @@ def _cubic_call_vector_1d(xint: NDArray[np.floating], spline: SplineCoeffs, ext:
         if x_loc < spline.x[0] and ext != 0:
             res[j] = y_bound_low
             last_idx = 0
-            continue
-
-        if x_loc == spline.x[n_control - 1]:
-            res[j] = spline.y[n_control - 1]
-            last_idx = n_control - 2
             continue
 
         if x_loc >= spline.x[n_control - 2]:
@@ -662,10 +655,6 @@ def _cubic_call_vector_linear_1d(xint: NDArray[np.floating], spline: SplineCoeff
             continue
         if x_loc > spline.x[-1] and ext != 0:
             res[j] = y_bound_high
-            continue
-
-        if x_loc == spline.x[n_control - 1]:
-            res[j] = spline.y[n_control - 1]
             continue
 
         # locate the enclosing subspline directly with a binary search
