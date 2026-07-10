@@ -15,7 +15,7 @@ First public release candidate.
   (close to SciPy `method="makima"`; the default).
 - `AkimaSpline` object-oriented interface for ordinary Python callers, with
   SciPy-like `ext` boundary handling (extrapolate, zero, boundary value, or NaN).
-- Numba-friendly helpers -- `akima_create_helper`, `cubic_call`,
+- Numba-friendly helpers -- `make_akima_coeffs`, `cubic_call`,
   `cubic_call_scalar`, `cubic_call_vector`, and `cubic_call_vector_linear` --
   for building and evaluating splines inside fully jitted code.
 - Full type annotations (`py.typed`) and numpy-style docstrings.

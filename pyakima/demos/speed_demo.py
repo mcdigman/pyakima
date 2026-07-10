@@ -21,11 +21,11 @@ import numpy as np
 from pyakima import (
     AkimaSpline,
     SplineCoeffs,
-    akima_create_helper,
     cubic_call,
     cubic_call_scalar,
     cubic_call_vector,
     cubic_call_vector_linear,
+    make_akima_coeffs,
 )
 
 if TYPE_CHECKING:
@@ -188,7 +188,7 @@ def _pyakima_spline(
 
 def _pyakima_helper(x: np.ndarray, y: np.ndarray, model: ModelCase) -> object:
     # Match AkimaSpline's ownership behavior so helper vs class isolates object overhead.
-    return akima_create_helper(
+    return make_akima_coeffs(
         x,
         y,
         corner_model=model.corner_model,

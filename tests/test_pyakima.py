@@ -15,11 +15,11 @@ from numba.core.errors import TypingError
 from pyakima.pyakima import (
     AkimaSpline,
     SplineCoeffs,
-    akima_create_helper,
     cubic_call,
     cubic_call_scalar,
     cubic_call_vector,
     cubic_call_vector_linear,
+    make_akima_coeffs,
     spline_single_knot_eval,
 )
 
@@ -179,10 +179,10 @@ def test_create_rejects_length_mismatch_and_nonincreasing_controls() -> None:
     x, y = _affine_control_points()
 
     with pytest.raises(ValueError, match='Need at least 5 control points'):
-        akima_create_helper(x[:4], y[:4])
+        make_akima_coeffs(x[:4], y[:4])
 
     with pytest.raises(ValueError, match='Input shapes must match'):
-        akima_create_helper(x, y[:-1])
+        make_akima_coeffs(x, y[:-1])
 
     for bad_x, bad_y in (
         (x, y.reshape(1, y.size)),
@@ -190,22 +190,22 @@ def test_create_rejects_length_mismatch_and_nonincreasing_controls() -> None:
         (x.reshape(1, x.size), y.reshape(1, y.size)),
     ):
         with pytest.raises(ValueError, match='x and y must be one-dimensional'):
-            akima_create_helper(bad_x, bad_y)
+            make_akima_coeffs(bad_x, bad_y)
 
     duplicate_x = x.copy()
     duplicate_x[2] = duplicate_x[1]
     with pytest.raises(ValueError, match='x must be monotonically increasing'):
-        akima_create_helper(duplicate_x, y)
+        make_akima_coeffs(duplicate_x, y)
 
     decreasing_x = x.copy()
     decreasing_x[2] = decreasing_x[1] - 1.0
     with pytest.raises(ValueError, match='x must be monotonically increasing'):
-        akima_create_helper(decreasing_x, y)
+        make_akima_coeffs(decreasing_x, y)
 
     nan_x = x.copy()
     nan_x[2] = np.nan
     with pytest.raises(ValueError, match='x must be monotonically increasing'):
-        akima_create_helper(nan_x, y)
+        make_akima_coeffs(nan_x, y)
 
 
 @pytest.mark.parametrize(
@@ -255,7 +255,7 @@ def test_invalid_corner_model_raises_value_error() -> None:
         AkimaSpline(x, y, corner_model='unknown')
 
     with pytest.raises(ValueError, match='Unrecognized option for corner model'):
-        akima_create_helper(x, y, corner_model=99)
+        make_akima_coeffs(x, y, corner_model=99)
 
 
 def test_explicit_denominator_cut_changes_corner_branch_when_large_enough() -> None:
@@ -290,7 +290,7 @@ def test_create_helper_rejects_negative_or_nonfinite_denominator_cut(denom_small
     x, y = _nonlinear_control_points()
 
     with pytest.raises(ValueError, match='denom_small_cut must be non-negative and finite'):
-        akima_create_helper(x, y, denom_small_cut=denom_small_cut)
+        make_akima_coeffs(x, y, denom_small_cut=denom_small_cut)
 
 
 @pytest.mark.parametrize('denom_small_cut', [-1.0, np.inf, -np.inf])
@@ -329,7 +329,7 @@ def test_integer_control_points_match_float_cast_and_yield_float_coefficients(co
     x_int = np.array([0, 1, 2, 3, 4, 5, 6], dtype=np.int64)
     y_int = np.array([0, 1, 8, 27, 10, 5, 2], dtype=np.int64)
 
-    int_spline = AkimaSpline(x_int, y_int, ext=0, corner_model=corner_model)
+    int_spline = AkimaSpline(x_int, y_int, ext=0, corner_model=corner_model)  # type: ignore[arg-type]
     float_spline = AkimaSpline(x_int.astype(np.float64), y_int.astype(np.float64), ext=0, corner_model=corner_model)
 
     for name in ('a', 'b', 'c', 'd'):
@@ -360,7 +360,7 @@ def test_akima_spline_rejects_non_1d_control_points() -> None:
 
 def test_single_knot_eval_accepts_scalar_and_vector_inputs() -> None:
     x, y = _affine_control_points()
-    spline = akima_create_helper(x, y)
+    spline = make_akima_coeffs(x, y)
 
     scalar = spline_single_knot_eval(np.float64(1.25), spline, 1)
     vector_x = np.array([1.0, 1.25, 1.5, 1.75])
@@ -372,7 +372,7 @@ def test_single_knot_eval_accepts_scalar_and_vector_inputs() -> None:
 
 def test_single_knot_eval_preserves_2d_shape_with_non_affine_oracle() -> None:
     x, y = _nonlinear_control_points()
-    spline = akima_create_helper(x, y, corner_model=2, denom_small_cut=0.0)
+    spline = make_akima_coeffs(x, y, corner_model=2, denom_small_cut=0.0)
     xint = np.array([[1.0, 1.25, 1.5], [1.75, 2.0, 2.25]])
     i = 1
     dx = xint - spline.x[i]
@@ -390,7 +390,7 @@ def test_non_affine_basic_akima_coefficients_match_hand_computed_values(corner_m
     x = np.arange(6, dtype=np.float64)
     y = np.array([0.0, 1.0, 3.0, 7.0, 14.0, 25.0])
 
-    spline = akima_create_helper(x, y, corner_model=corner_model, denom_small_cut=0.0)
+    spline = make_akima_coeffs(x, y, corner_model=corner_model, denom_small_cut=0.0)
 
     np.testing.assert_array_equal(spline.a, y[:-1])
     _assert_same_float_values(spline.b, np.array([1.0 / 2.0, 4.0 / 3.0, 5.0 / 2.0, 5.0, 61.0 / 7.0]), maxulp=18)
@@ -406,7 +406,7 @@ def test_non_affine_makima_coefficients_match_hand_computed_values() -> None:
     x = np.arange(6, dtype=np.float64)
     y = np.array([0.0, 1.0, 3.0, 7.0, 14.0, 25.0])
 
-    spline = akima_create_helper(x, y, corner_model=2, denom_small_cut=0.0)
+    spline = make_akima_coeffs(x, y, corner_model=2, denom_small_cut=0.0)
 
     np.testing.assert_array_equal(spline.a, y[:-1])
     _assert_same_float_values(
@@ -430,7 +430,7 @@ def test_non_affine_makima_coefficients_match_hand_computed_values() -> None:
 def test_subsplines_interpolate_from_left_and_are_c1_continuous_without_sharp_corners(corner_model: int) -> None:
     x = np.arange(6, dtype=np.float64)
     y = np.array([0.0, 1.0, 3.0, 7.0, 14.0, 25.0])
-    spline = akima_create_helper(x, y, corner_model=corner_model, denom_small_cut=0.0)
+    spline = make_akima_coeffs(x, y, corner_model=corner_model, denom_small_cut=0.0)
 
     left_endpoint_values = np.array([spline_single_knot_eval(x[i + 1], spline, i) for i in range(x.size - 1)])
     _assert_same_float_values(left_endpoint_values, y[1:], maxulp=4)
@@ -476,7 +476,7 @@ def test_corner_branch_coefficients_match_sharp_and_rounded_models(
     x = np.arange(6, dtype=np.float64)
     y = np.array([0.0, 1.0, 2.0, 5.0, 8.0, 13.0])
 
-    spline = akima_create_helper(x, y, corner_model=corner_model, denom_small_cut=denom_small_cut)
+    spline = make_akima_coeffs(x, y, corner_model=corner_model, denom_small_cut=denom_small_cut)
 
     _assert_same_float_values(spline.b, expected_b)
     _assert_same_float_values(spline.c, expected_c)
@@ -631,7 +631,7 @@ def test_reachable_zero_left_weight_path_matches_hand_computed_coefficients() ->
     x = np.arange(6, dtype=np.float64)
     y = np.array([0.0, 1.0, 2.0, 5.0, 10.0, 17.0])
 
-    spline = akima_create_helper(x, y, corner_model=0, denom_small_cut=0.0)
+    spline = make_akima_coeffs(x, y, corner_model=0, denom_small_cut=0.0)
 
     _assert_same_float_values(spline.b, np.array([1.0, 1.0, 1.0, 4.0, 6.0]))
     _assert_same_float_values(spline.c, np.array([0.0, 0.0, 3.0, 1.0, 1.0]))
@@ -670,7 +670,7 @@ def test_irregular_grid_coefficients_match_hand_computed_values(
     x, y = _irregular_nonlinear_control_points()
     assert not np.all(np.diff(x) == np.diff(x)[0])
 
-    spline = akima_create_helper(x, y, corner_model=corner_model, denom_small_cut=0.0)
+    spline = make_akima_coeffs(x, y, corner_model=corner_model, denom_small_cut=0.0)
 
     np.testing.assert_array_equal(spline.a, y[:-1])
     _assert_same_float_values(spline.b, expected_b, maxulp=32)
@@ -1095,8 +1095,8 @@ def test_integer_control_arrays_are_accepted_without_integer_output_dtype_guaran
     y = 2 * x + 1
     xint = np.array([0.0, 0.5, 2.5, 4.0])
 
-    helper_spline = akima_create_helper(x, y)  # type: ignore[arg-type]
-    object_spline = AkimaSpline(x, y, ext=0)
+    helper_spline = make_akima_coeffs(x, y)  # type: ignore[arg-type]
+    object_spline = AkimaSpline(x, y, ext=0)  # type: ignore[arg-type]
 
     np.testing.assert_array_equal(helper_spline.b, np.full(x.size - 1, 2.0))
     np.testing.assert_array_equal(helper_spline.c, np.zeros(x.size - 1))
@@ -1115,7 +1115,7 @@ def test_mixed_float_control_dtypes_are_accepted_and_coefficients_follow_x_dtype
     x = np.arange(6, dtype=x_dtype)
     y = np.array([0.0, 1.0, 0.5, 2.0, -1.0, 3.0], dtype=y_dtype)
 
-    helper_spline = akima_create_helper(x, y)
+    helper_spline = make_akima_coeffs(x, y)
     object_spline = AkimaSpline(x, y, ext=0).spline
 
     for spline in (helper_spline, object_spline):
@@ -1157,8 +1157,8 @@ def test_large_dynamic_range_control_point_has_strict_local_coefficient_kernel(
     changed_index = 8
     changed[changed_index] = _power_of_two(dtype, 90 if dtype is np.float32 else 900)
 
-    baseline = akima_create_helper(x, y, corner_model=corner_model)
-    large_dynamic_range = akima_create_helper(x, changed, corner_model=corner_model)
+    baseline = make_akima_coeffs(x, y, corner_model=corner_model)
+    large_dynamic_range = make_akima_coeffs(x, changed, corner_model=corner_model)
 
     _assert_component_unchanged_outside_interval(baseline, large_dynamic_range, 'a', changed_index, changed_index)
     _assert_component_unchanged_outside_interval(
@@ -1191,13 +1191,13 @@ def test_overflowing_control_value_differences_are_confined_to_strict_coefficien
 ) -> None:
     x = np.arange(16, dtype=dtype)
     y = (np.sin(np.arange(16)) * 0.125).astype(dtype)
-    baseline = akima_create_helper(x, y)
+    baseline = make_akima_coeffs(x, y)
 
     changed = y.copy()
     changed_index = 7
     changed[changed_index] = np.finfo(dtype).max  # pylint: disable=no-member
     changed[changed_index + 1] = -np.finfo(dtype).max  # pylint: disable=no-member
-    overflowed = akima_create_helper(x, changed)
+    overflowed = make_akima_coeffs(x, changed)
 
     _assert_component_unchanged_outside_interval(baseline, overflowed, 'a', changed_index, changed_index + 1)
     _assert_component_unchanged_outside_interval(baseline, overflowed, 'b', changed_index - 2, changed_index + 3)
@@ -1222,7 +1222,7 @@ def test_finite_control_values_with_nonfinite_differences_produce_local_nan_coef
     finite_max = np.finfo(np.float64).max  # pylint: disable=no-member
     y = np.array([0.0, finite_max, -finite_max, 0.0, 1.0, 2.0, 3.0, 4.0])
 
-    spline = akima_create_helper(x, y)
+    spline = make_akima_coeffs(x, y)
 
     assert np.all(np.isfinite(spline.y))
     with np.errstate(over='ignore'):
@@ -1246,8 +1246,8 @@ def test_subnormal_x_spacing_division_overflow_returns_nonfinite_local_coefficie
 
     clean_x = x.copy()
     clean_x[4] = dtype(0.5)
-    baseline = akima_create_helper(clean_x, y)
-    tiny_interval = akima_create_helper(x, y)
+    baseline = make_akima_coeffs(clean_x, y)
+    tiny_interval = make_akima_coeffs(x, y)
 
     _assert_component_unchanged_outside_interval(baseline, tiny_interval, 'a', 0, -1)
     _assert_component_unchanged_outside_interval(baseline, tiny_interval, 'b', 2, 6)
@@ -1272,7 +1272,7 @@ def test_near_overflow_affine_spline_keeps_zero_higher_order_coefficients(
 ) -> None:
     x, y, slope = _power_of_two_affine_points(dtype, h_exponent=h_exponent, slope_exponent=slope_exponent)
 
-    spline = akima_create_helper(x, y)
+    spline = make_akima_coeffs(x, y)
 
     expected_slope = np.full(spline.b.shape, float(slope), dtype=spline.b.dtype)
     _assert_same_float_values(spline.b, expected_slope, maxulp=4)
@@ -1293,7 +1293,7 @@ def test_actual_multiplier_overflow_in_affine_spline_produces_ieee_nonfinite_coe
         warnings.filterwarnings(action='ignore', message='overflow encountered in cast')
         x, y, _ = _power_of_two_affine_points(dtype, h_exponent=h_exponent, slope_exponent=slope_exponent)
 
-    spline = akima_create_helper(x, y)
+    spline = make_akima_coeffs(x, y)
     assert np.all(np.isfinite(spline.a))
     assert np.any(~np.isfinite(spline.b))
     assert np.any(~np.isfinite(spline.c))

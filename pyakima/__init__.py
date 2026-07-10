@@ -13,11 +13,11 @@ from pyakima._version import __version__
 from pyakima.pyakima import (
     AkimaSpline,
     SplineCoeffs,
-    akima_create_helper,
     cubic_call,
     cubic_call_scalar,
     cubic_call_vector,
     cubic_call_vector_linear,
+    make_akima_coeffs,
     spline_single_knot_eval,
 )
 
@@ -25,10 +25,10 @@ __all__ = [
     'AkimaSpline',
     'SplineCoeffs',
     '__version__',
-    'akima_create_helper',
     'cubic_call',
     'cubic_call_scalar',
     'cubic_call_vector',
     'cubic_call_vector_linear',
+    'make_akima_coeffs',
     'spline_single_knot_eval',
 ]
