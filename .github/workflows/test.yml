@@ -49,13 +49,46 @@ jobs:
       - name: Run tests
         run: .venv/bin/python -m pytest
 
+  floor:
+    # Dependency-floor gate: oldest supported Python (3.10) at the lowest-direct
+    # resolution -> numpy 1.22 / numba 0.56, the most compatibility-fragile
+    # combination. Pulled out of the declared-support matrix into its own job so
+    # it runs on every trigger -- push, PR (including PRs to dev), manual
+    # dispatch, and the weekly cron -- because the floor is where a newly
+    # released numpy/numba is most likely to break, so it is always exercised
+    # rather than only on PRs to main.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          python-version: "3.10"
+          cache-dependency-glob: "**/pyproject.toml"
+
+      # Install the package (and its numpy/numba) at the lowest-direct resolution,
+      # then add pytest separately so the test runner stays current instead of
+      # being floored too: pytest is not a runtime dependency, so pinning it to
+      # its own lower bound would test nothing useful.
+      - name: Install project (lowest-direct resolution)
+        run: |
+          uv venv --python 3.10
+          uv pip install --resolution lowest-direct .
+          uv pip install pytest
+
+      - name: Run tests
+        run: .venv/bin/python -m pytest
+
   matrix:
     # Declared-support gate: run the actual test suite across every supported
-    # Python (requires-python = ">=3.10"), including the dependency floor pair
-    # (3.10 + lowest-direct resolution -> numpy 1.22 / numba 0.56), the most
-    # compatibility-fragile combination. Heavier than the fast job, so it runs
-    # only on PRs targeting main (gating merges into main) and the weekly cron --
-    # not on every push. workflow_dispatch also triggers it for manual runs.
+    # Python (requires-python = ">=3.10") against the latest resolvable
+    # numpy/numba. The dependency floor (3.10 + lowest-direct) is covered
+    # separately by the always-on `floor` job above. Heavier than the fast job,
+    # so it runs only on PRs targeting main (gating merges into main) and the
+    # weekly cron -- not on every push. workflow_dispatch also triggers it for
+    # manual runs.
     if: >-
       github.event_name == 'schedule'
       || github.event_name == 'workflow_dispatch'
@@ -65,9 +98,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Dependency floor: oldest Python + lowest-direct resolution.
-          - python-version: "3.10"
-            resolution: lowest-direct
           # Each supported Python against the latest resolvable numpy/numba.
           - python-version: "3.10"
             resolution: highest
@@ -93,7 +123,7 @@ jobs:
       # Install the package (and its numpy/numba) at the matrix resolution, then
       # add pytest separately so the test runner stays current instead of being
       # floored too: pytest is not a runtime dependency, so pinning it to its own
-      # lower bound under --resolution lowest-direct would test nothing useful.
+      # lower bound would test nothing useful.
       - name: Install project (${{ matrix.resolution }} resolution)
         run: |
           uv venv --python ${{ matrix.python-version }}
