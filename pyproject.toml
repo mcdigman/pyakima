@@ -1,12 +1,12 @@
 [project]
 name = "pyakima"
 version = "0.1.0rc1"
-description = "Tool for getting numba compilable akima spline interpolation"
+description = "Fast, Numba-compatible Akima/makima spline interpolation for regular and irregular grids"
 readme = "README.md"
 authors = [
   { name="Matthew C. Digman", email="matthew.digman@vanderbilt.edu" }
 ]
-license = "Apache-2.0 WITH LLVM-exception"
+license = "Apache-2.0"
 license-files = ["LICENSE"]
 # Trove classifiers (https://pypi.org/classifiers/). No "License ::" classifier is
 # listed: the license is declared as the PEP 639 SPDX expression above, which
@@ -20,6 +20,7 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "Intended Audience :: Developers",
     "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Software Development :: Libraries :: Python Modules",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
@@ -70,6 +71,7 @@ Homepage = "https://github.com/mcdigman/pyakima"
 Documentation = "https://pyakima.readthedocs.io/en/latest/"
 Repository = "https://github.com/mcdigman/pyakima"
 Issues = "https://github.com/mcdigman/pyakima/issues"
+Changelog = "https://github.com/mcdigman/pyakima/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 # Development / test tooling. The linters and type-checkers here are also wired

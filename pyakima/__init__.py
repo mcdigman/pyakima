@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: Copyright 2026 Matthew C. Digman
-# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# SPDX-License-Identifier: Apache-2.0
 """Provide numba-compatible Akima spline interpolation.
 
 Expose the public building blocks of the :mod:`pyakima.pyakima` module: the

@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: Copyright 2026 Matthew C. Digman
-# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# SPDX-License-Identifier: Apache-2.0
 """Render light and dark PNGs of pyakima's corner models on a step function.
 
 The step at ``x = 4`` creates sharp corners where the three exported corner
