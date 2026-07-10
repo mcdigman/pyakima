@@ -35,9 +35,12 @@ classifiers = [
 # Free-form PyPI search keywords (unvalidated, unlike classifiers). The name and
 # description are already indexed, so these lean toward distinctive synonyms
 # (makima, sub-spline) and the problem Akima solves (irregularly spaced data)
-# rather than repeating the summary. Application domains (e.g. gravitational-wave
-# / LISA PSD work) are intentionally left out here -- they belong in the README,
-# not in keywords, since the package itself is a general interpolation primitive.
+# rather than repeating the summary. Gravitational-wave / LISA / PSD-estimation
+# terms are included deliberately: a large share of the recent Akima-spline
+# literature is mHz gravitational-wave PSD work (see the README references), so
+# searches from that community should land here. Domain keywords are added only
+# for applications the README actually documents -- other plausible domains
+# (graphics, geoscience, finance) stay out until the docs give them a hook.
 keywords = [
     "akima",
     "makima",
@@ -45,6 +48,7 @@ keywords = [
     "sub-spline",
     "akima spline",
     "interpolation",
+    "curve fitting",
     "irregularly spaced data",
     "irregular grid",
     "numba",
@@ -52,6 +56,9 @@ keywords = [
     "jit",
     "numerical",
     "scientific computing",
+    "gravitational waves",
+    "LISA",
+    "power spectral density",
 ]
 # Utility package: keep the runtime floors low so it installs broadly. These
 # floors are also the "version-floor" end of the build matrix in
