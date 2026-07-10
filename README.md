@@ -77,6 +77,9 @@ dependencies are available with:
 pip install "pyakima[demos]"
 ```
 
+Note that `pygsl_lite` from the `demos` dependencies may not always succeed on a `pip install`; any demo that uses it recovers gracefully if it cannot be imported. `pyakima.demos.speed_demo` can recover if _none_ of the `demo` dependencies are present, and `pyakima.demos.step_demo` can write demo `png` files to `assets/akima_step_*.png`if only matlplotlib is present.
+
+
 ## Quick Start
 
 ```python
