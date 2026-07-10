@@ -36,11 +36,11 @@ The top panel slides one control point up and down: the pyakima `makima` fit
 stays local and flat on either side of the spike, while a natural cubic spline
 rings above and below it. The bottom panel zooms into a sharp kink to show the
 three corner models `pyakima` exports:
-1. `non-rounded`: Algorithm based on [\[1\]](#ref-1), comparable numerical behavior to GSL; note the unstable behavior is because
-     the algorithm is non-differentiable at corners, _not_ a peculiar limitation of this implementation [\[2\]](#ref-2).
-2. `akima` ([SciPy parity](https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.Akima1DInterpolator.html)) [\[3\]](#ref-3).
+1. `non-rounded`: Algorithm based on <a href="#ref-1">[1]</a>, comparable numerical behavior to GSL; note the unstable behavior is because
+     the algorithm is non-differentiable at corners, _not_ a peculiar limitation of this implementation <a href="#ref-2">[2]</a>.
+2. `akima` ([SciPy parity](https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.Akima1DInterpolator.html)) <a href="#ref-3">[3]</a>.
    Discontinuous behavior is less severe than `non-rounded`; slightly more prone to overshoot, and still has special edge-case handling.
-3. `makima` [Modified Akima Algorithm](https://www.mathworks.com/help/matlab/ref/makima.html) [\[4\]](#ref-4); recommended default
+3. `makima` [Modified Akima Algorithm](https://www.mathworks.com/help/matlab/ref/makima.html) <a href="#ref-4">[4]</a>; recommended default
    Less overshoot than `akima`, while mathematically guaranteed to preserve differentiability/continuous behavior at corners without special edge-case handling.
    Similar performance to `akima` in most cases.
 <!-- doc:corners:end -->
@@ -55,7 +55,7 @@ The control points oscillate smoothly between regular uniform-grid spacing and a
 Such a spacing is similar to what might be used when using Akima splines for a PSD estimation task, or in approximating a function
 with sharp features with as few control points as possible. Such uses with irregular grids are a key modern application of Akima splines,
 and are of central importance to their utility in gravitational-wave detection applications, such as using trans-dimensional MCMC
-to adaptively fit Akima splines to un-modeled gravitational-wave sources [\[5\]](#ref-5), [\[6\]](#ref-6), [\[7\]](#ref-7).
+to adaptively fit Akima splines to un-modeled gravitational-wave sources <a href="#ref-5">[5]</a>, <a href="#ref-6">[6]</a>, <a href="#ref-7">[7]</a>.
 Cubic splines, such as `scipy`'s default `CubicSpline` plotted above, oscillate wildly on the same irregularly-spaced grid, which typically makes them unsuitable for such analysis tasks.
 <!-- doc:grid:end -->
 
