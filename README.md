@@ -40,6 +40,18 @@ three corner models `pyakima` exports:
    Less overshoot than `akima`, while mathematically guaranteed to preserve differentiability/continuous behavior at corners without special edge-case handling.
    Similar performance to `akima` in most cases.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/akima_grid_dark.gif">
+  <img alt="Single panel animation. As the control points slide between a regular and irregular grid, the pyakima makima curve smoothly hugs the data, while the scipy default cubic spline oscillates so strongly it extends off the plotted y axis." src="assets/akima_grid_light.gif">
+</picture>
+
+The control points oscillate smoothly between regular uniform-grid spacing and an inverse-CDF-based spacing.
+Such a spacing is similar to what might be used when using Akima splines for a PSD estimation task, or in approximating a function
+with sharp features with as few control points as possible. Such uses with irregular grids are a key modern application of Akima splines,
+and are of central importance to their utility in gravitational-wave detection applications, such as using trans-dimensional MCMC
+to adaptively fit Akima splines to un-modeled gravitational-wave sources [^bwv][^mag][^pak].
+Cubic splines, such as `scipy`'s default `CubicSpline` plotted above, oscillate wildly on the same irregularly-spaced grid, which typically makes them unsuitable for such analysis tasks.
+
 ## Table of Contents
 
 - [Installation](#installation)
@@ -134,8 +146,9 @@ NaN boundary handling. `AkimaSpline` defaults to `ext=3`.
 it can write the README assets:
 
 ```bash
-pip install -e '.[demos]'               # scipy, matplotlib, pygsl_lite
-python -m pyakima.demos.animate_demo    # writes assets/akima_demo_{light,dark}.gif
+pip install -e '.[demos]'                  # scipy, matplotlib, pygsl_lite
+python -m pyakima.demos.animate_demo       # writes assets/akima_demo_{light,dark}.gif
+python -m pyakima.demos.animate_grid_demo  # writes assets/akima_grid_{light,dark}.gif
 ```
 
 ## Performance Snapshot
@@ -218,3 +231,6 @@ full license text.
 [^aki]: Akima, Hiroshi. "A new method of interpolation and smooth curve fitting based on local procedures." Journal of the ACM (JACM) , 17.4, 1970, pp. 589–602.
 [^mak]: C. Moler, [*Makima Piecewise Cubic Interpolation*](https://blogs.mathworks.com/cleve/2019/04/29/makima-piecewise-cubic-interpolation/),
   Cleve's Corner (MathWorks blog), 2019.
+[^bwv]: Detecting gravitational wave signals using a flexible model for the amplitude and frequency evolution. T Gupta, NJ Cornish. Physical Review D, 2024•APS [arXiv:2404.11719](https://arxiv.org/abs/2404.11719).
+[^mag]: Model-agnostic gravitational-wave background characterization algorithm. T Knapp, PM Meyers, AI Renzini.Physical Review D, 2025•APS. [arXiv:2507.08095](https://arxiv.org/abs/2507.08095)
+[^pak]: “Precise analysis of gravitational waves from binary neutron star coalescence using Hilbert–Huang transform based on Akima spline interpolation.” Yoda, Itsuki et al. Progress of Theoretical and Experimental Physics (2023). [DOI:10.1093/ptep/ptad101](https://doi.org/10.1093/ptep%2Fptad101)
