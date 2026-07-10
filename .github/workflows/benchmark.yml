@@ -1,0 +1,93 @@
+name: Benchmark
+
+# Manual-only: benchmark numbers are noisy on shared GitHub-hosted runners and
+# are not a merge gate, so this does not run on push/PR. Trigger it from the
+# Actions tab (Run workflow) when you want fresh cross-OS speed_demo output.
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: benchmark-${{ github.ref }}
+  cancel-in-progress: true
+
+# This job only checks out code and uploads artifacts; it needs no write scope
+# and no git credentials after checkout. Pin the token to read-only and drop the
+# stored credentials rather than inheriting the repo/org default token policy.
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.14"
+
+jobs:
+  benchmark:
+    # Run pyakima.demos.speed_demo on each hosted OS so its output can be
+    # compared against the local (Apple-silicon) results committed under
+    # docs/benchmarks/. fail-fast is off so one OS failing still yields the
+    # others' numbers.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache-dependency-glob: "**/pyproject.toml"
+
+      # Install the project plus scipy into a venv so speed_demo can time the
+      # scipy backend as well as pyakima. scipy ships wheels for all three runner
+      # OSes; pygsl_lite is handled separately (Linux only) because it needs the
+      # system GSL C library. matplotlib is not installed -- speed_demo does not
+      # import it (only the animate demos do).
+      - name: Install project with scipy backend
+        run: |
+          uv venv
+          uv pip install . scipy
+
+      # Best-effort GSL comparison on Linux only: install GSL's dev headers and
+      # pygsl_lite so speed_demo can also time the GSL akima backend. pygsl_lite
+      # has no prebuilt wheels and needs GSL's C library, simplest to provide on
+      # Ubuntu. continue-on-error so a build failure does not sink the run --
+      # speed_demo just reports the backend unavailable and skips its rows.
+      - name: Install GSL backend (Linux, best effort)
+        if: runner.os == 'Linux'
+        continue-on-error: true
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgsl-dev
+          uv pip install pygsl_lite
+
+      # Run speed_demo and capture stdout to a per-runner file under
+      # docs/benchmarks/. The name records the runner OS and CPU arch so results
+      # from different hardware do not collide. bash (present on all hosted
+      # runners, including Windows) keeps the venv-python path handling uniform.
+      - name: Run speed demo
+        shell: bash
+        run: |
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            py=".venv/Scripts/python.exe"
+          else
+            py=".venv/bin/python"
+          fi
+          mkdir -p docs/benchmarks
+          out="docs/benchmarks/${{ runner.os }}-${{ runner.arch }}_speeds.txt"
+          "$py" -m pyakima.demos.speed_demo | tee "$out"
+
+      # Upload the captured output. Artifact names must be unique across the
+      # matrix, so OS+arch is part of the name.
+      - name: Upload benchmark output
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: speed-benchmark-${{ runner.os }}-${{ runner.arch }}
+          path: docs/benchmarks/${{ runner.os }}-${{ runner.arch }}_speeds.txt
+          if-no-files-found: error
