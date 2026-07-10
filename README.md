@@ -22,7 +22,7 @@ The implementation is fully typed (`py.typed`) and keeps the public surface
 small:
 `AkimaSpline` is an object-oriented interface which simplifies calls for non-jitted Python callers; it has only a constructor and a `__call__` method.
 For jitted workloads,
-1. The spline interpolation itself is represented as a set of coefficients stored in a `SplineCoeffs` object, computed once via `akima_create_helper`.
+1. The spline interpolation itself is represented as a set of coefficients stored in a `SplineCoeffs` object, computed once via `make_akima_coeffs`.
 2. The spline is called from `cubic_call`, which selects the appropriate coefficients and evaluates the polynomial with `spline_single_knot_eval`.
 <!-- doc:intro:end -->
 
@@ -116,19 +116,19 @@ helper functions.
 <!-- doc:jitted:start -->
 ## Jitted Use
 
-Use `akima_create_helper` and `cubic_call` when the spline should be created or
+Use `make_akima_coeffs` and `cubic_call` when the spline should be created or
 evaluated from inside an `njit` function.
 
 ```python
 import numpy as np
 from numba import njit
 
-from pyakima import akima_create_helper, cubic_call
+from pyakima import make_akima_coeffs, cubic_call
 
 
 @njit
 def build_and_evaluate(x: np.ndarray, y: np.ndarray, x_eval: np.ndarray) -> np.ndarray:
-    coeffs = akima_create_helper(x, y, corner_model=2)
+    coeffs = make_akima_coeffs(x, y, corner_model=2)
     return cubic_call(x_eval, coeffs, 0)
 ```
 

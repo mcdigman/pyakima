@@ -6,7 +6,7 @@ objects defined:
 
 SplineCoeffs: NamedTuple storing a spline
 AkimaSpline: python object managing creating and evaluating an akima spline
-akima_create_helper and cubic_call helpers: numba-compatible spline creation and evaluation
+make_akima_coeffs and cubic_call helpers: numba-compatible spline creation and evaluation
 
 """
 
@@ -56,7 +56,7 @@ class SplineCoeffs(NamedTuple):
 
 
 @njit(error_model='numpy')
-def akima_create_helper(
+def make_akima_coeffs(
     x: NDArray[np.floating], y: NDArray[np.floating], corner_model: int = 2, denom_small_cut: float = 0.0
 ) -> SplineCoeffs:
     """
@@ -811,7 +811,7 @@ class AkimaSpline:
         y_float: NDArray[np.floating] = np.array(y, dtype=np.result_type(y.dtype, np.float32))
 
         # get the spline object
-        self.spline: SplineCoeffs = akima_create_helper(
+        self.spline: SplineCoeffs = make_akima_coeffs(
             x_float, y_float, corner_model=self.corner_model, denom_small_cut=self.denom_small_cut
         )
 
