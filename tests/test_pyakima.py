@@ -181,8 +181,16 @@ def test_create_rejects_length_mismatch_and_nonincreasing_controls() -> None:
     with pytest.raises(ValueError, match='Need at least 5 control points'):
         akima_create_helper(x[:4], y[:4])
 
-    with pytest.raises(ValueError, match='Input sizes must match'):
+    with pytest.raises(ValueError, match='Input shapes must match'):
         akima_create_helper(x, y[:-1])
+
+    for bad_x, bad_y in (
+        (x, y.reshape(1, y.size)),
+        (x.reshape(1, x.size), y),
+        (x.reshape(1, x.size), y.reshape(1, y.size)),
+    ):
+        with pytest.raises(ValueError, match='x and y must be one-dimensional'):
+            akima_create_helper(bad_x, bad_y)
 
     duplicate_x = x.copy()
     duplicate_x[2] = duplicate_x[1]
@@ -338,6 +346,18 @@ def test_invalid_linear_vector_calls_raises_value_error() -> None:
         AkimaSpline(x, y, linear_vector_calls=2)
 
 
+def test_akima_spline_rejects_non_1d_control_points() -> None:
+    x, y = _affine_control_points()
+
+    for bad_x, bad_y in (
+        (x, y.reshape(1, y.size)),
+        (x.reshape(1, x.size), y),
+        (x.reshape(1, x.size), y.reshape(1, y.size)),
+    ):
+        with pytest.raises(ValueError, match='x and y must be one-dimensional'):
+            AkimaSpline(bad_x, bad_y)
+
+
 def test_single_knot_eval_accepts_scalar_and_vector_inputs() -> None:
     x, y = _affine_control_points()
     spline = akima_create_helper(x, y)
@@ -348,6 +368,21 @@ def test_single_knot_eval_accepts_scalar_and_vector_inputs() -> None:
 
     assert scalar == 3.5
     np.testing.assert_array_equal(vector, 2 * vector_x + 1)
+
+
+def test_single_knot_eval_preserves_2d_shape_with_non_affine_oracle() -> None:
+    x, y = _nonlinear_control_points()
+    spline = akima_create_helper(x, y, corner_model=2, denom_small_cut=0.0)
+    xint = np.array([[1.0, 1.25, 1.5], [1.75, 2.0, 2.25]])
+    i = 1
+    dx = xint - spline.x[i]
+    expected = spline.a[i] + spline.b[i] * dx + spline.c[i] * dx**2 + spline.d[i] * dx**3
+
+    actual = spline_single_knot_eval(xint, spline, i)
+
+    assert actual.shape == xint.shape
+    assert np.any(spline.c != 0.0) or np.any(spline.d != 0.0)
+    _assert_same_float_values(actual, expected, maxulp=0)
 
 
 @pytest.mark.parametrize('corner_model', [0, 1])
@@ -805,6 +840,47 @@ def test_scalar_vector_dispatch_and_linear_vector_paths_agree(xint: np.ndarray, 
     _assert_same_float_values(dispatch_values, scalar_values, maxulp=0)
     _assert_same_float_values(class_values, scalar_values, maxulp=0)
     _assert_same_float_values(linear_class_values, scalar_values, maxulp=0)
+
+
+@pytest.mark.parametrize(
+    ('shape', 'order'),
+    [
+        ((2, 3), 'C'),
+        ((2, 3), 'F'),
+        ((2, 2, 3), 'C'),
+        ((2, 2, 3), 'F'),
+    ],
+)
+@pytest.mark.parametrize('ext', [0, 1, 3, 4])
+def test_multidimensional_vector_calls_preserve_shape_and_match_scalar_oracle(
+    shape: tuple[int, ...],
+    order: str,
+    ext: int,
+) -> None:
+    x, y = _nonlinear_control_points()
+    spline = AkimaSpline(x, y, ext=ext)
+    values = np.array([2.2, -0.5, 5.25, 1.1, 4.0, 0.0, 3.5, 2.75, 1.5, 5.0, 0.25, 4.75])
+    xint = values[: np.prod(shape)].reshape(shape)
+    if order == 'F':
+        xint = np.asfortranarray(xint)
+        assert xint.flags.f_contiguous
+    else:
+        xint = np.ascontiguousarray(xint)
+        assert xint.flags.c_contiguous
+
+    scalar_values = np.array([cubic_call_scalar(float(point), spline.spline, ext) for point in xint.ravel()])
+    expected = scalar_values.reshape(xint.shape)
+
+    for actual in (
+        cubic_call_vector(xint, spline.spline, ext),
+        cubic_call_vector_linear(xint, spline.spline, ext),
+        cubic_call(xint, spline.spline, ext),
+        _jitted_cubic_call_vector(xint, spline.spline, ext),
+        spline(xint),
+        AkimaSpline(x, y, ext=ext, linear_vector_calls=1)(xint),
+    ):
+        assert actual.shape == xint.shape
+        _assert_same_float_values(actual, expected, maxulp=0)
 
 
 @pytest.mark.parametrize('ext', [0, 1, 3, 4])
