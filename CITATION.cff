@@ -5,6 +5,8 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it using the metadata from this file."
 type: software
 title: "pyakima"
+version: 0.1.0rc1
+date-released: 2026-07-10
 abstract: "Fast, Numba-compatible Akima/makima spline interpolation for regular and irregular grids"
 authors:
   - family-names: "Digman"
@@ -18,6 +20,9 @@ keywords:
   - akima
   - makima
   - spline
+  - cubic spline
+  - modified akima
+  - piecewise cubic interpolation
   - interpolation
   - curve fitting
   - irregular grid

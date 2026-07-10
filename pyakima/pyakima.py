@@ -78,8 +78,8 @@ def make_akima_coeffs(
                 Non-differentiable/exhibits discontinuous numerical behavior at sharp corners, but not oscillations.
             1 Original Akima method (close to scipy method='akima').
                 Differentiable at sharp corners and less noticeably discontinuous behavior, still some oscillations.
-            2 Modified Akima/makima method with stabilizing weights for guaranteed diffentiability.
-                Because there no special corner handling discontinuous numerical behavior is elimited.
+            2 Modified Akima/makima method with stabilizing weights for guaranteed differentiability.
+                No special corner handling is needed, so discontinuous numerical behavior is eliminated.
                 Close to scipy method='makima'.
                 Described by C. Moler at https://blogs.mathworks.com/cleve/2019/04/29/makima-piecewise-cubic-interpolation/
 
@@ -733,10 +733,10 @@ class AkimaSpline:
         Selection for how corners are handled:
             0 or 'non-rounded': Wodicka non-rounded corner method (near-exact match to gsl for denom_small_cut == 0.0)
                 Non-differentiable/exhibits discontinuous numerical behavior at sharp corners, but not oscillations.
-            1 of 'akima': Original Akima method (close to scipy method='akima').
+            1 or 'akima': Original Akima method (close to scipy method='akima').
                 Differentiable at sharp corners and less noticeably discontinuous behavior, still some oscillations.
             2 or 'makima': Modified Akima/makima method with stabilizing weights for guaranteed differentiability.
-                Because there no special corner handling discontinuous numerical behavior is eliminated.
+                No special corner handling is needed, so discontinuous numerical behavior is eliminated.
                 Close to scipy method='makima'.
                 Described by C. Moler at https://blogs.mathworks.com/cleve/2019/04/29/makima-piecewise-cubic-interpolation/
 
