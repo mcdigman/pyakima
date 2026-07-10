@@ -329,7 +329,7 @@ def test_integer_control_points_match_float_cast_and_yield_float_coefficients(co
     x_int = np.array([0, 1, 2, 3, 4, 5, 6], dtype=np.int64)
     y_int = np.array([0, 1, 8, 27, 10, 5, 2], dtype=np.int64)
 
-    int_spline = AkimaSpline(x_int, y_int, ext=0, corner_model=corner_model)
+    int_spline = AkimaSpline(x_int, y_int, ext=0, corner_model=corner_model)  # type: ignore[arg-type]
     float_spline = AkimaSpline(x_int.astype(np.float64), y_int.astype(np.float64), ext=0, corner_model=corner_model)
 
     for name in ('a', 'b', 'c', 'd'):
@@ -1096,7 +1096,7 @@ def test_integer_control_arrays_are_accepted_without_integer_output_dtype_guaran
     xint = np.array([0.0, 0.5, 2.5, 4.0])
 
     helper_spline = akima_create_helper(x, y)  # type: ignore[arg-type]
-    object_spline = AkimaSpline(x, y, ext=0)
+    object_spline = AkimaSpline(x, y, ext=0)  # type: ignore[arg-type]
 
     np.testing.assert_array_equal(helper_spline.b, np.full(x.size - 1, 2.0))
     np.testing.assert_array_equal(helper_spline.c, np.zeros(x.size - 1))
