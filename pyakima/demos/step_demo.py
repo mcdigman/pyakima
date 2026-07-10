@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: Copyright 2026 Matthew C. Digman
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 """Render light and dark PNGs of pyakima's corner models on a step function.
 
 The step at ``x = 4`` creates sharp corners where the three exported corner
@@ -15,9 +17,6 @@ Run from a source checkout::
 
     pip install -e '.[demos]'            # only matplotlib is needed for this demo
     python -m pyakima.demos.step_demo    # writes assets/akima_step_*.png
-
-Copyright 2026 Matthew C. Digman
-
 """
 
 from typing import Any, cast

@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: Copyright 2026 Matthew C. Digman
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 """Render light and dark animated GIFs showcasing pyakima against a cubic spline.
 
 Top panel: a control point slides up and down, contrasting the pyakima makima
@@ -14,9 +16,6 @@ Run from a source checkout::
 
     pip install -e '.[demos]'                 # scipy, matplotlib, pygsl_lite
     python -m pyakima.demos.animate_demo      # writes assets/akima_demo_*.gif
-
-Copyright 2026 Matthew C. Digman
-
 """
 
 from typing import Any, cast

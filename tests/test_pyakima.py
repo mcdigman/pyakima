@@ -1,7 +1,6 @@
-"""Tests for the public pyakima spline helpers.
-
-Copyright 2026 Matthew C. Digman
-"""
+# SPDX-FileCopyrightText: Copyright 2026 Matthew C. Digman
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+"""Tests for the public pyakima spline helpers."""
 
 from __future__ import annotations
 
