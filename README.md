@@ -36,11 +36,11 @@ The top panel slides one control point up and down: the pyakima `makima` fit
 stays local and flat on either side of the spike, while a natural cubic spline
 rings above and below it. The bottom panel zooms into a sharp kink to show the
 three corner models `pyakima` exports:
-1. `non-rounded`: Algorithm based on [1], comparable numerical behavior to GSL; note the unstable behavior is because
-     the algorithm is non-differentiable at corners, _not_ a peculiar limitation of this implementation [2].
-2. `akima` ([SciPy parity](https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.Akima1DInterpolator.html)) [3].
+1. `non-rounded`: Algorithm based on <a href="#ref-1">[1]</a>, comparable numerical behavior to GSL; note the unstable behavior is because
+     the algorithm is non-differentiable at corners, _not_ a peculiar limitation of this implementation <a href="#ref-2">[2]</a>.
+2. `akima` ([SciPy parity](https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.Akima1DInterpolator.html)) <a href="#ref-3">[3]</a>.
    Discontinuous behavior is less severe than `non-rounded`; slightly more prone to overshoot, and still has special edge-case handling.
-3. `makima` [Modified Akima Algorithm](https://www.mathworks.com/help/matlab/ref/makima.html) [4]; recommended default
+3. `makima` [Modified Akima Algorithm](https://www.mathworks.com/help/matlab/ref/makima.html) <a href="#ref-4">[4]</a>; recommended default
    Less overshoot than `akima`, while mathematically guaranteed to preserve differentiability/continuous behavior at corners without special edge-case handling.
    Similar performance to `akima` in most cases.
 <!-- doc:corners:end -->
@@ -55,7 +55,7 @@ The control points oscillate smoothly between regular uniform-grid spacing and a
 Such a spacing is similar to what might be used when using Akima splines for a PSD estimation task, or in approximating a function
 with sharp features with as few control points as possible. Such uses with irregular grids are a key modern application of Akima splines,
 and are of central importance to their utility in gravitational-wave detection applications, such as using trans-dimensional MCMC
-to adaptively fit Akima splines to un-modeled gravitational-wave sources [5], [6], [7].
+to adaptively fit Akima splines to un-modeled gravitational-wave sources <a href="#ref-5">[5]</a>, <a href="#ref-6">[6]</a>, <a href="#ref-7">[7]</a>.
 Cubic splines, such as `scipy`'s default `CubicSpline` plotted above, oscillate wildly on the same irregularly-spaced grid, which typically makes them unsuitable for such analysis tasks.
 <!-- doc:grid:end -->
 
@@ -256,12 +256,12 @@ full license text.
 <!-- doc:footnotes:start -->
 ## References
 
-1. G. Engeln-Müllges & F. Uhlig, *Numerical Algorithms with C*, Springer, 1996, ch. 13 "Akima and Renner Subsplines," Algorithm 13.1. ISBN 978-3-642-64682-9.
-2. Note: the internals of the GSL implementation have never been viewed by the repository author. However, calls to GSL exhibit near-identical behavior, supporting that the issue is algorithmic rather than due to implementation error.
-3. Akima, Hiroshi. "A new method of interpolation and smooth curve fitting based on local procedures." Journal of the ACM (JACM) , 17.4, 1970, pp. 589–602.
-4. C. Moler, [*Makima Piecewise Cubic Interpolation*](https://blogs.mathworks.com/cleve/2019/04/29/makima-piecewise-cubic-interpolation/),
+1. <a id="ref-1"></a>G. Engeln-Müllges & F. Uhlig, *Numerical Algorithms with C*, Springer, 1996, ch. 13 "Akima and Renner Subsplines," Algorithm 13.1. ISBN 978-3-642-64682-9.
+2. <a id="ref-2"></a>Note: the internals of the GSL implementation have never been viewed by the repository author. However, calls to GSL exhibit near-identical behavior, supporting that the issue is algorithmic rather than due to implementation error.
+3. <a id="ref-3"></a>Akima, Hiroshi. "A new method of interpolation and smooth curve fitting based on local procedures." Journal of the ACM (JACM) , 17.4, 1970, pp. 589–602.
+4. <a id="ref-4"></a>C. Moler, [*Makima Piecewise Cubic Interpolation*](https://blogs.mathworks.com/cleve/2019/04/29/makima-piecewise-cubic-interpolation/),
    Cleve's Corner (MathWorks blog), 2019.
-5. Detecting gravitational wave signals using a flexible model for the amplitude and frequency evolution. T Gupta, NJ Cornish. Physical Review D, 2024•APS [arXiv:2404.11719](https://arxiv.org/abs/2404.11719).
-6. Model-agnostic gravitational-wave background characterization algorithm. T Knapp, PM Meyers, AI Renzini.Physical Review D, 2025•APS. [arXiv:2507.08095](https://arxiv.org/abs/2507.08095)
-7. “Precise analysis of gravitational waves from binary neutron star coalescence using Hilbert–Huang transform based on Akima spline interpolation.” Yoda, Itsuki et al. Progress of Theoretical and Experimental Physics (2023). [DOI:10.1093/ptep/ptad101](https://doi.org/10.1093/ptep%2Fptad101)
+5. <a id="ref-5"></a>Detecting gravitational wave signals using a flexible model for the amplitude and frequency evolution. T Gupta, NJ Cornish. Physical Review D, 2024•APS [arXiv:2404.11719](https://arxiv.org/abs/2404.11719).
+6. <a id="ref-6"></a>Model-agnostic gravitational-wave background characterization algorithm. T Knapp, PM Meyers, AI Renzini.Physical Review D, 2025•APS. [arXiv:2507.08095](https://arxiv.org/abs/2507.08095)
+7. <a id="ref-7"></a>“Precise analysis of gravitational waves from binary neutron star coalescence using Hilbert–Huang transform based on Akima spline interpolation.” Yoda, Itsuki et al. Progress of Theoretical and Experimental Physics (2023). [DOI:10.1093/ptep/ptad101](https://doi.org/10.1093/ptep%2Fptad101)
 <!-- doc:footnotes:end -->
