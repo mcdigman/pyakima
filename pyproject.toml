@@ -65,12 +65,9 @@ dependencies = [
 ]
 requires-python = ">=3.10"
 
-# Only the GitHub repository is included: it is the source, homepage, and issue
-# tracker. There is no separate documentation site yet -- docs.yml builds the
-# Sphinx HTML but only uploads it as a CI artifact -- so no Documentation link
-# is listed until the docs are actually published somewhere.
 [project.urls]
 Homepage = "https://github.com/mcdigman/pyakima"
+Documentation = "https://pyakima.readthedocs.io/en/latest/"
 Repository = "https://github.com/mcdigman/pyakima"
 Issues = "https://github.com/mcdigman/pyakima/issues"
 

@@ -5,6 +5,7 @@
 [![Test](https://github.com/mcdigman/pyakima/actions/workflows/test.yml/badge.svg)](https://github.com/mcdigman/pyakima/actions/workflows/test.yml)
 [![Coverage](https://github.com/mcdigman/pyakima/actions/workflows/coverage.yml/badge.svg)](https://github.com/mcdigman/pyakima/actions/workflows/coverage.yml)
 [![Typed](https://github.com/mcdigman/pyakima/actions/workflows/typecheck.yml/badge.svg)](https://github.com/mcdigman/pyakima/actions/workflows/typecheck.yml)
+[![Documentation Status](https://readthedocs.org/projects/pyakima/badge/?version=latest)](https://pyakima.readthedocs.io/en/latest/)
 
 
 `pyakima` is a fast, JIT-compatible Akima spline implementation written in
