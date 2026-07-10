@@ -42,6 +42,26 @@ jobs:
       - name: Check distribution metadata
         run: uvx twine check dist/*
 
+      # Guard against a mistyped GitHub Release tag: the package version is
+      # static in pyproject.toml, so the build would otherwise upload it under
+      # whatever the release happens to be tagged. Fail unless the release tag
+      # equals the version parsed from the built sdist (an optional leading "v"
+      # is allowed). This runs in build -- the single choke point both publish
+      # jobs need -- because PyPI/TestPyPI uploads are immutable. The tag is read
+      # from env, not interpolated into the script, to avoid injection.
+      - name: Verify release tag matches built version
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          tag="${TAG#v}"
+          sdist="$(basename dist/*.tar.gz .tar.gz)"
+          built="${sdist#pyakima-}"
+          if [ "$tag" != "$built" ]; then
+            echo "::error::Release tag '$tag' does not match built version '$built'"
+            exit 1
+          fi
+          echo "Release tag matches built version: $built"
+
       - name: Upload distributions
         uses: actions/upload-artifact@v7
         with:
@@ -51,8 +71,10 @@ jobs:
 
   testpypi:
     # Prereleases (rc/alpha/beta -- i.e. the GitHub Release is marked
-    # "pre-release") go to TestPyPI only, so the real upload can be rehearsed
-    # before a final version is tagged.
+    # "pre-release") publish to TestPyPI ONLY, by design: release candidates are
+    # deliberately not pushed to real PyPI. Cutting a non-prerelease Release is
+    # the explicit gate for a real PyPI upload (see the `pypi` job). TestPyPI
+    # thus also serves as a rehearsal of the upload before a final tag.
     needs: build
     if: github.event.release.prerelease
     runs-on: ubuntu-latest
