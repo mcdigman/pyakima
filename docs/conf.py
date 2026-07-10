@@ -47,3 +47,16 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # -- HTML output -------------------------------------------------------------
 html_theme = 'furo'
 html_title = f'pyakima {release}'
+
+# html_static_path directories have their *contents* copied into the build's
+# _static/ directory. '_static' supplies custom.css; '../assets' pulls in the
+# repo-root demo animations/figures (also written there by pyakima.demos and
+# referenced by the GitHub README) so the docs can display them without moving
+# the folder or duplicating the files under docs/. Docs pages therefore
+# reference them as ``_static/akima_*.{gif,png}``.
+html_static_path = ['_static', '../assets']
+
+# custom.css drives the light/dark image switching. Unlike the README's
+# <picture> (which keys off the OS prefers-color-scheme), it follows Furo's own
+# theme toggle via the body[data-theme] attribute.
+html_css_files = ['custom.css']
