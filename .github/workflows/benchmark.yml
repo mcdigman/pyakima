@@ -32,12 +32,12 @@ jobs:
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
           python-version: ${{ env.PYTHON_VERSION }}
@@ -86,7 +86,7 @@ jobs:
       # matrix, so OS+arch is part of the name.
       - name: Upload benchmark output
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: speed-benchmark-${{ runner.os }}-${{ runner.arch }}
           path: docs/benchmarks/${{ runner.os }}-${{ runner.arch }}_speeds.txt
