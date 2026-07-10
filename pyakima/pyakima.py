@@ -82,6 +82,7 @@ def make_akima_coeffs(
                 Because there no special corner handling discontinuous numerical behavior is elimited.
                 Close to scipy method='makima'.
                 Described by C. Moler at https://blogs.mathworks.com/cleve/2019/04/29/makima-piecewise-cubic-interpolation/
+
         Default is 2 (modified Akima/'makima')
     denom_small_cut : float
         Threshold below which the denominator in the slope is treated as zero and handled specially.
@@ -725,6 +726,7 @@ class AkimaSpline:
             2: Not implemented
             3: Return the boundary value
             4: Return `nan` outside domain
+
         Default 3
 
     corner_model : int | str
@@ -737,6 +739,7 @@ class AkimaSpline:
                 Because there no special corner handling discontinuous numerical behavior is eliminated.
                 Close to scipy method='makima'.
                 Described by C. Moler at https://blogs.mathworks.com/cleve/2019/04/29/makima-piecewise-cubic-interpolation/
+
         Default is 'makima' (modified Akima)
     denom_small_cut : float
         Threshold below which the denominator in the slope is treated as zero and handled specially.
