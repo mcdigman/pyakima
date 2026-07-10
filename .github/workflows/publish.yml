@@ -1,0 +1,94 @@
+name: Publish
+
+# Publish to PyPI (or TestPyPI for prereleases) when a GitHub Release is
+# published. release-triggered workflows run from the file on the default
+# branch, so this only takes effect once it is on main -- which is also where
+# releases are cut. Authentication is PyPI Trusted Publishing (OIDC): no API
+# token is stored; each publish job requests a short-lived id-token that PyPI
+# exchanges for upload rights, so the repo + workflow + environment must be
+# registered as a Trusted Publisher on (Test)PyPI first.
+on:
+  release:
+    types: [published]
+
+# Never cancel an in-flight publish.
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    # Build the sdist + wheel once and hand them to whichever publish job runs,
+    # so the artifacts uploaded to the index are exactly what was checked here.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          python-version: "3.14"
+          cache-dependency-glob: "**/pyproject.toml"
+
+      - name: Build sdist and wheel
+        run: uv build
+
+      - name: Check distribution metadata
+        run: uvx twine check dist/*
+
+      - name: Upload distributions
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/*
+          if-no-files-found: error
+
+  testpypi:
+    # Prereleases (rc/alpha/beta -- i.e. the GitHub Release is marked
+    # "pre-release") go to TestPyPI only, so the real upload can be rehearsed
+    # before a final version is tagged.
+    needs: build
+    if: github.event.release.prerelease
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/pyakima
+    permissions:
+      id-token: write  # required for Trusted Publishing (OIDC)
+    steps:
+      - name: Download distributions
+        uses: actions/download-artifact@v7
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+  pypi:
+    # Full releases (not marked pre-release) go to real PyPI.
+    needs: build
+    if: ${{ !github.event.release.prerelease }}
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/pyakima
+    permissions:
+      id-token: write  # required for Trusted Publishing (OIDC)
+    steps:
+      - name: Download distributions
+        uses: actions/download-artifact@v7
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
