@@ -18,6 +18,8 @@ import numba.core.types
 import numba.extending
 import numpy as np
 from numba import njit
+from numba.core.types.scalars import Float as NumbaFloat
+from numba.core.types.scalars import Integer as NumbaInteger
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
@@ -570,13 +572,13 @@ def cubic_call(
 def _select_cubic_call(xint, spline, ext):  # type: ignore[no-untyped-def] # noqa: ANN001, ANN202 # skylos: ignore[SKY-U002] # pragma: no cover
     # Type annotations wouldn't be processed and would interfere with the numba overload,
     # so the linters are silenced for this function.
-    if not isinstance(ext, numba.core.types.Integer):
+    if not isinstance(ext, NumbaInteger):
         msg1 = 'Unsupported type of input: ' + str(type(ext))
         raise TypeError(msg1)
     if not isinstance(spline, numba.core.types.NamedTuple):
         msg2 = 'Unsupported type of input: ' + str(type(spline))
         raise TypeError(msg2)
-    if isinstance(xint, (numba.core.types.Float, numba.core.types.Integer)):
+    if isinstance(xint, (NumbaFloat, NumbaInteger)):
 
         def temp(xint, spline, ext):  # type: ignore[no-untyped-def] # noqa: ANN001, ANN202
             return cubic_call_scalar(xint, spline, ext)
