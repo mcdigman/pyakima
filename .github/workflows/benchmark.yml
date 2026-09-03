@@ -20,17 +20,12 @@ env:
   PYTHON_VERSION: "3.14"
 
 jobs:
-  benchmark:
-    # Run pyakima.demos.speed_demo on each hosted OS so its output can be
-    # compared against the local (Apple-silicon) results committed under
-    # docs/benchmarks/. fail-fast is off so one OS failing still yields the
-    # others' numbers.
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
-    name: ${{ matrix.os }}
+  # Keep each GitHub-hosted runner label literal. Besides making the trust
+  # boundary explicit, this prevents a future workflow input or matrix change
+  # from redirecting benchmark code onto a persistent self-hosted runner.
+  benchmark-linux:
+    runs-on: ubuntu-latest
+    name: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
         with:
@@ -58,8 +53,7 @@ jobs:
       # has no prebuilt wheels and needs GSL's C library, simplest to provide on
       # Ubuntu. continue-on-error so a build failure does not sink the run --
       # speed_demo just reports the backend unavailable and skips its rows.
-      - name: Install GSL backend (Linux, best effort)
-        if: runner.os == 'Linux'
+      - name: Install GSL backend (best effort)
         continue-on-error: true
         run: |
           sudo apt-get update
@@ -68,22 +62,84 @@ jobs:
 
       # Run speed_demo and capture stdout to a per-runner file under
       # docs/benchmarks/. The name records the runner OS and CPU arch so results
-      # from different hardware do not collide. bash (present on all hosted
-      # runners, including Windows) keeps the venv-python path handling uniform.
+      # from different hardware do not collide.
+      - name: Run speed demo
+        run: |
+          mkdir -p docs/benchmarks
+          out="docs/benchmarks/${{ runner.os }}-${{ runner.arch }}_speeds.txt"
+          .venv/bin/python -m pyakima.demos.speed_demo | tee "$out"
+
+      # Upload the captured output. Artifact names must be unique across the
+      # three jobs, so OS+arch is part of the name.
+      - name: Upload benchmark output
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: speed-benchmark-${{ runner.os }}-${{ runner.arch }}
+          path: docs/benchmarks/${{ runner.os }}-${{ runner.arch }}_speeds.txt
+          if-no-files-found: error
+
+  benchmark-windows:
+    runs-on: windows-latest
+    name: windows-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78  # v7.6.0
+        with:
+          enable-cache: true
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache-dependency-glob: "**/pyproject.toml"
+
+      - name: Install project with scipy backend
+        run: |
+          uv venv
+          uv pip install . scipy
+
       - name: Run speed demo
         shell: bash
         run: |
-          if [ "${{ runner.os }}" = "Windows" ]; then
-            py=".venv/Scripts/python.exe"
-          else
-            py=".venv/bin/python"
-          fi
           mkdir -p docs/benchmarks
           out="docs/benchmarks/${{ runner.os }}-${{ runner.arch }}_speeds.txt"
-          "$py" -m pyakima.demos.speed_demo | tee "$out"
+          .venv/Scripts/python.exe -m pyakima.demos.speed_demo | tee "$out"
 
-      # Upload the captured output. Artifact names must be unique across the
-      # matrix, so OS+arch is part of the name.
+      - name: Upload benchmark output
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: speed-benchmark-${{ runner.os }}-${{ runner.arch }}
+          path: docs/benchmarks/${{ runner.os }}-${{ runner.arch }}_speeds.txt
+          if-no-files-found: error
+
+  benchmark-macos:
+    runs-on: macos-latest
+    name: macos-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78  # v7.6.0
+        with:
+          enable-cache: true
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache-dependency-glob: "**/pyproject.toml"
+
+      - name: Install project with scipy backend
+        run: |
+          uv venv
+          uv pip install . scipy
+
+      - name: Run speed demo
+        run: |
+          mkdir -p docs/benchmarks
+          out="docs/benchmarks/${{ runner.os }}-${{ runner.arch }}_speeds.txt"
+          .venv/bin/python -m pyakima.demos.speed_demo | tee "$out"
+
       - name: Upload benchmark output
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
