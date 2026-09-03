@@ -64,6 +64,7 @@ jobs:
       # docs/benchmarks/. The name records the runner OS and CPU arch so results
       # from different hardware do not collide.
       - name: Run speed demo
+        shell: bash
         run: |
           mkdir -p docs/benchmarks
           out="docs/benchmarks/${{ runner.os }}-${{ runner.arch }}_speeds.txt"
@@ -135,6 +136,7 @@ jobs:
           uv pip install . scipy
 
       - name: Run speed demo
+        shell: bash
         run: |
           mkdir -p docs/benchmarks
           out="docs/benchmarks/${{ runner.os }}-${{ runner.arch }}_speeds.txt"
