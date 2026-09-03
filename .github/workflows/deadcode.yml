@@ -33,8 +33,18 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           cache-dependency-glob: "**/pyproject.toml"
 
-      # Dead-code / unreachable-symbol detection. Run unpinned (like the other
-      # uvx-based checks) so CI tracks the current release. False positives are
-      # suppressed inline with `# skylos: ignore[...]` comments in the source.
+      # Require the full repository to remain clean of dead code, security
+      # findings, secrets, and evidence-backed AI defects. Scanning `.` rather
+      # than only the Python package also covers workflow/configuration files;
+      # --strict makes any finding in an enabled category fail the job. Run
+      # unpinned (like the other uvx-based checks) so CI tracks the current
+      # release. False positives are suppressed inline with
+      # `# skylos: ignore[...]` comments in the source.
       - name: Run skylos
-        run: uvx skylos pyakima tests
+        run: >
+          uvx skylos
+          --strict
+          --danger
+          --secrets
+          --ai-defects
+          .

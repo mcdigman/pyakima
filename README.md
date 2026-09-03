@@ -4,7 +4,7 @@
 [![DOI](https://zenodo.org/badge/972418978.svg)](https://zenodo.org/badge/latestdoi/972418978)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)<br>
 [![Test](https://github.com/mcdigman/pyakima/actions/workflows/test.yml/badge.svg)](https://github.com/mcdigman/pyakima/actions/workflows/test.yml)
-[![Coverage](https://github.com/mcdigman/pyakima/actions/workflows/coverage.yml/badge.svg)](https://github.com/mcdigman/pyakima/actions/workflows/coverage.yml)
+[![Coverage Status](https://coveralls.io/repos/github/mcdigman/pyakima/badge.svg?branch=main)](https://coveralls.io/github/mcdigman/pyakima?branch=main)
 [![Typed](https://github.com/mcdigman/pyakima/actions/workflows/typecheck.yml/badge.svg)](https://github.com/mcdigman/pyakima/actions/workflows/typecheck.yml)
 [![Documentation Status](https://readthedocs.org/projects/pyakima/badge/?version=latest)](https://pyakima.readthedocs.io/en/latest/)
 
