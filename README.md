@@ -103,7 +103,7 @@ from pyakima import AkimaSpline
 x = np.linspace(0.0, 10.0, 16)
 y = np.sin(x)
 
-spline = AkimaSpline(x, y, corner_model="makima", ext=3)
+spline = AkimaSpline(x, y, corner_model='makima', ext=3)
 
 print(spline(2.5))
 print(spline(np.linspace(-1.0, 11.0, 1000)))
