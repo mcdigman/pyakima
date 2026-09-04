@@ -73,7 +73,7 @@ def _control_x(alpha: float, edge_shift: float = 0.0) -> NDArray[np.float64]:
 def _render(name: str, theme: dict[str, str]) -> None:
     ref, cubic, makima, dot = theme['cubic'], theme['akima'], theme['makima'], theme['dot']
     # rc keys are dynamic strings, not the RcParams key Literal, so cast past the check.
-    with plt.rc_context(cast(Any, rc_params(theme))):  # noqa: TC006
+    with plt.rc_context(cast(Any, rc_params(theme))):  # ruff: ignore[TC006]
         fig, ax = plt.subplots(figsize=(9, 5.6), layout='constrained')
 
         def frame(k: int) -> None:

@@ -569,7 +569,7 @@ def cubic_call(
 
 
 @numba.extending.overload(cubic_call)
-def _select_cubic_call(xint, spline, ext):  # type: ignore[no-untyped-def] # noqa: ANN001, ANN202 # skylos: ignore[SKY-U002] # pragma: no cover
+def _select_cubic_call(xint, spline, ext):  # type: ignore[no-untyped-def] # ruff: ignore[ANN001, ANN202] # skylos: ignore[SKY-U002] # pragma: no cover
     # Type annotations wouldn't be processed and would interfere with the numba overload,
     # so the linters are silenced for this function.
     if not isinstance(ext, NumbaInteger):
@@ -580,11 +580,11 @@ def _select_cubic_call(xint, spline, ext):  # type: ignore[no-untyped-def] # noq
         raise TypeError(msg2)
     if isinstance(xint, (NumbaFloat, NumbaInteger)):
 
-        def temp(xint, spline, ext):  # type: ignore[no-untyped-def] # noqa: ANN001, ANN202
+        def temp(xint, spline, ext):  # type: ignore[no-untyped-def] # ruff: ignore[ANN001, ANN202]
             return cubic_call_scalar(xint, spline, ext)
     elif isinstance(xint, numba.core.types.Array):
 
-        def temp(xint, spline, ext):  # type: ignore[no-untyped-def] # noqa: ANN001, ANN202
+        def temp(xint, spline, ext):  # type: ignore[no-untyped-def] # ruff: ignore[ANN001, ANN202]
             return cubic_call_vector(xint, spline, ext)
     else:
         msg3 = 'Unsupported type of input: ' + str(type(xint))

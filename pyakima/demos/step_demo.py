@@ -48,7 +48,7 @@ MODELS = (
 
 def _render(name: str, theme: dict[str, str]) -> None:
     # rc keys are dynamic strings, not the RcParams key Literal, so cast past the check.
-    with plt.rc_context(cast(Any, rc_params(theme))):  # noqa: TC006
+    with plt.rc_context(cast(Any, rc_params(theme))):  # ruff: ignore[TC006]
         fig, ax = plt.subplots(figsize=(9, 5.6), layout='constrained')
         style_axes(ax)
         ax.plot(XS, YS_TRUE, color=theme['cubic'], ls='--', lw=5, alpha=0.5, label='true step')
