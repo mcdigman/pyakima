@@ -6,7 +6,7 @@
 [![Test](https://github.com/mcdigman/pyakima/actions/workflows/test.yml/badge.svg)](https://github.com/mcdigman/pyakima/actions/workflows/test.yml)
 [![Coverage Status](https://coveralls.io/repos/github/mcdigman/pyakima/badge.svg?branch=main)](https://coveralls.io/github/mcdigman/pyakima?branch=main)
 [![Typed](https://github.com/mcdigman/pyakima/actions/workflows/typecheck.yml/badge.svg)](https://github.com/mcdigman/pyakima/actions/workflows/typecheck.yml)
-[![Documentation Status](https://readthedocs.org/projects/pyakima/badge/?version=latest)](https://pyakima.readthedocs.io/en/latest/)
+[![Skylos Grade](https://img.shields.io/badge/Skylos-A%2B%20%28100%29-brightgreen)](https://github.com/mcdigman/pyakima/actions/workflows/deadcode.yml)
 
 
 <!-- doc:intro:start -->
