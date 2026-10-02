@@ -8,7 +8,7 @@ Please open an issue before starting anything substantial.
 ## Development setup
 
 `pyakima` uses [uv](https://docs.astral.sh/uv/) and requires CPython 3.10 or
-newer; CI currently tests 3.10 through 3.14. Create the project environment
+newer; CI currently tests 3.10 through 3.15. Create the project environment
 with:
 
 ```bash
