@@ -24,7 +24,6 @@ classifiers = [
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -69,14 +68,13 @@ keywords = [
 # floors are also the "version-floor" end of the build matrix in
 # .github/workflows/build.yml (uv's lowest-direct resolution installs exactly
 # these), so they are exercised in CI.
-#   - numpy 1.22 is the oldest release with cp310 wheels that numba 0.56 accepts.
-#   - numba 0.56 is the oldest release with cp310 wheels; it caps numpy at <1.24,
-#     so the floor pair (numpy 1.22 + numba 0.56) resolves together on 3.10.
+# NumPy 1.23.5 and Numba 0.57 provide a compatible floor pair with Python 3.11
+# wheels; Numba 0.56 does not support Python 3.11.
 dependencies = [
-    "numpy>=1.22",
-    "numba>=0.56",
+    "numpy>=1.23.5",
+    "numba>=0.57",
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 
 [project.urls]
 Homepage = "https://github.com/mcdigman/pyakima"
@@ -113,6 +111,7 @@ docs = [
 demos = [
     "scipy",
     "matplotlib",
+    "pillow>=13.0.0",
     "pygsl_lite",
 ]
 
@@ -133,7 +132,7 @@ ignore-missing-imports = ["pygsl_lite", "pygsl_lite.*", "matplotlib", "matplotli
 # resolves types from the installed environment (the CI job installs .[dev]),
 # so numpy is checked for real via its py.typed marker. numba ships no py.typed,
 # so its missing-import reporting is disabled here.
-pythonVersion = "3.10"
+pythonVersion = "3.11"
 reportMissingImports = "none"
 # Exclude dot-directories (e.g. the CI job's .venv) so pyright does not
 # type-check installed dependencies, and the "build" copy the wheel build

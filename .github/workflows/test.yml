@@ -57,8 +57,8 @@ jobs:
         run: .venv/bin/python -m pytest
 
   floor:
-    # Dependency-floor gate: oldest supported Python (3.10) at the lowest-direct
-    # resolution -> numpy 1.22 / numba 0.56, the most compatibility-fragile
+    # Dependency-floor gate: oldest supported Python (3.11) at the lowest-direct
+    # resolution -> numpy 1.23.5 / numba 0.57, the most compatibility-fragile
     # combination. Pulled out of the declared-support matrix into its own job so
     # it runs on every trigger -- push, PR (including PRs to dev), manual
     # dispatch, and the weekly cron -- because the floor is where a newly
@@ -74,7 +74,7 @@ jobs:
         uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884  # v10.3.0
         with:
           enable-cache: true
-          python-version: "3.10"
+          python-version: "3.11"
           cache-dependency-glob: "**/pyproject.toml"
 
       # Install the package (and its numpy/numba) at the lowest-direct resolution,
@@ -83,7 +83,7 @@ jobs:
       # its own lower bound would test nothing useful.
       - name: Install project (lowest-direct resolution)
         run: |
-          uv venv --python 3.10
+          uv venv --python 3.11
           uv pip install --resolution lowest-direct .
           uv pip install pytest
 
@@ -92,8 +92,8 @@ jobs:
 
   matrix:
     # Declared-support gate: run the actual test suite across every supported
-    # Python (requires-python = ">=3.10") against the latest resolvable
-    # numpy/numba. The dependency floor (3.10 + lowest-direct) is covered
+    # Python (requires-python = ">=3.11") against the latest resolvable
+    # numpy/numba. The dependency floor (3.11 + lowest-direct) is covered
     # separately by the always-on `floor` job above. Heavier than the fast job,
     # so it runs only on PRs targeting main (gating merges into main) and the
     # weekly cron -- not on every push. workflow_dispatch also triggers it for
@@ -108,8 +108,6 @@ jobs:
       matrix:
         include:
           # Each supported Python against the latest resolvable numpy/numba.
-          - python-version: "3.10"
-            resolution: highest
           - python-version: "3.11"
             resolution: highest
           - python-version: "3.12"

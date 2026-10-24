@@ -40,7 +40,7 @@ repos:
   rev: v3.22.0
   hooks:
   - id: pyupgrade
-    args: [--keep-percent-format, --py310-plus]
+    args: [--keep-percent-format, --py311-plus]
 
 - repo: https://github.com/bwhmather/ssort
   rev: 0.17.0

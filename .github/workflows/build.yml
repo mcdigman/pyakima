@@ -45,15 +45,15 @@ jobs:
 
   install:
     # Confirm the package installs and imports both at the declared dependency
-    # floors (oldest Python + lowest-direct resolution -> numpy 1.22 / numba
-    # 0.56) and against the latest releases (modern Python + highest resolution).
+    # floors (oldest Python + lowest-direct resolution -> numpy 1.23.5 / numba
+    # 0.57) and against the latest releases (modern Python + highest resolution).
     needs: build
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         include:
-          - python-version: "3.10"
+          - python-version: "3.11"
             resolution: lowest-direct
           - python-version: "3.15"
             resolution: highest
