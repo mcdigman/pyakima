@@ -7,8 +7,8 @@ Please open an issue before starting anything substantial.
 
 ## Development setup
 
-`pyakima` uses [uv](https://docs.astral.sh/uv/) and requires CPython 3.10 or
-newer; CI currently tests 3.10 through 3.15. Create the project environment
+`pyakima` uses [uv](https://docs.astral.sh/uv/) and requires CPython 3.11 or
+newer; CI currently tests 3.11 through 3.15. Create the project environment
 with:
 
 ```bash
@@ -60,8 +60,8 @@ These are enforced by CI, so they are not merely stylistic preferences:
 - **Tests.** Use `pytest` style with non-vacuous assertions and maintain full
   line and branch coverage. Exercise relevant numerical boundaries, dtypes,
   shapes, extrapolation modes, and both JIT-enabled and pure-Python paths.
-- **Compatibility.** Runtime support starts at NumPy 1.22 and Numba 0.56 on
-  Python 3.10. Do not use newer APIs without either preserving those floors or
+- **Compatibility.** Runtime support starts at NumPy 1.23.5 and Numba 0.57 on
+  Python 3.11. Do not use newer APIs without either preserving those floors or
   proposing an explicit support-policy change. CI also tests current releases
   on every supported Python version.
 - **Licensing.** New source files carry the SPDX header used throughout

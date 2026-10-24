@@ -4,6 +4,18 @@ Notable changes to `pyakima`. The format loosely follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+### Security
+
+- Require Pillow 13.0.0 or newer for the Matplotlib demos to fix
+  CVE-2026-96639.
+
+### Changed
+
+- Drop Python 3.10 support; require Python 3.11 or newer, NumPy 1.23.5 or
+  newer, and Numba 0.57 or newer.
+
 ## [0.1.0] - 2026-07-10
 
 First public release.

@@ -80,7 +80,7 @@ Cubic splines, such as `scipy`'s default `CubicSpline` plotted above, oscillate 
 pip install pyakima
 ```
 
-`pyakima` requires Python 3.10 or newer, NumPy, and Numba. The optional demo
+`pyakima` requires Python 3.11 or newer, NumPy, and Numba. The optional demo
 dependencies are available with:
 
 ```bash
@@ -164,8 +164,8 @@ NaN boundary handling. `AkimaSpline` defaults to `ext=3`.
 <!-- doc:regen:start -->
 ## Regenerating the Demo
 
-`pyakima.demos` ships as an example subpackage; run it from a source checkout so
-it can write the README assets:
+`pyakima.demos` ships as an example subpackage; run the plotting demos with
+Python 3.11 or newer from a source checkout so they can write the README assets:
 
 ```bash
 pip install -e '.[demos]'                  # scipy, matplotlib, pygsl_lite
